@@ -3,11 +3,41 @@ title: "Project2"
 output: html_document
 ---
 
-# Test
+# rmcfs
+# identify the set of relevant features that would be used for classification
 
 ```{r}
 
-test <- 5+3
-print(test)
+
+```
+
+# R.ROSETTA
+# create and train a rule-based model with the selected features 
+
+```{r}
+
+
+```
+
+# clustering of model rules
+# evaluate and refine your model 
+
+```{r}
+
+
+```
+
+# VisuNet
+
+```{r}
+
+
+```
+
+# VisuArc
+# isualizes part of the given network and its connections derived from rules
+
+```{r}
+
 
 ```
