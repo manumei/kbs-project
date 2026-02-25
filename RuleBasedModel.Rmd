@@ -35,6 +35,11 @@ result2 <- result$RI[1:result$cutoff_value,]
 
 # Keep only relevant features
 selected_positions <- positions[, colnames(positions) %in% c(result2$attribute, "class"), drop = FALSE]
+
+# convert from char to factor
+selected_positions <- as.data.frame(selected_positions)
+selected_positions[] <- lapply(selected_positions, as.factor)
+
 write.csv(selected_positions, "data/clean/selected_positions.csv", row.names = FALSE)
 ```
 
@@ -56,13 +61,18 @@ table(selected_positions$class)
 ### Run Basic Test
 
 ```{r}
-ros <- rosetta(selected_positions, roc = TRUE, clroc = levels(selected_positions$decision)[1])
+ros <- rosetta(selected_positions, roc = TRUE, discrete=TRUE, clroc = "Human")
 
 rules <- ros$main
 quality <- ros$quality
 
 cat("Johnson - Number of rules:", nrow(rules), "\n")
 print(quality)
+
+# print top 12 rules
+rlsAut <- viewRules(rules[rules$decision=="Human",])
+print(rlsAut[1:12,])
+
 ```
 
 ### Basic Test Results
@@ -72,29 +82,52 @@ sig_rules <- rules[rules$pValue < 0.05, ]
 cat("Significant rules (p < 0.05):", nrow(sig_rules), "/", nrow(rules), "\n\n")
 tabS <- table(sig_rules$decision)
 print(tabS)
+```
 
-for (cls in levels(selected_positions$decision)) {
+```{r}
+for (cls in levels(selected_positions$class)) {
   pct <- tabS[cls] / sum(rules$decision == cls) * 100
     cat("% significant for class", cls, ":", round(pct, 1), "%\n")
 }
+```
 
+```{r}
 # Top rules for each decision class
-for (cls in levels(selected_positions$decision)) {
+for (cls in levels(selected_positions$class)) {
     cat("\n--- Top rules for class:", cls, "---\n")
     cls_rules <- rules[rules$decision == cls, ]
     print(viewRules(cls_rules[1:min(10, nrow(cls_rules)), ]))
 }
+```
 
+
+```{r}
 plotMeanROC(ros)
 
+```
+
+```{r}
 gf <- getFeatures(rules, filter = TRUE, filterType = "pvalue", thr = 0.05)
 print(gf$features)
+```
 
+```{r}
 genesAvian  <- gf$features$Avian          # Features occurring in significant avian rules.
+
 genesHuman <- gf$features$Human         # Features occurring in significant human rules.
 
-rec_rules <- recalculateRules(selected_positions, rules)
+commongenes <- intersect(genesHuman, genesAvian)
+commongenes
 
+uniquegenes <- setdiff(genesHuman, genesAvian)
+
+```
+
+```{r}
+rec_rules <- recalculateRules(selected_positions, rules)
+```
+
+```{r}
 # Top rule for class 0
 rules_0 <- rec_rules[rec_rules$decision == "0", ]
 top_0 <- which.min(rules_0$pValue)
@@ -106,7 +139,9 @@ rules_1 <- rec_rules[rec_rules$decision == "1", ]
 top_1 <- which.min(rules_1$pValue)
 cat("\nTop rule for class 1 - p =", rules_1$pValue[top_1], "\n")
 print(viewRules(rules_1[top_1, ]))
+```
 
+```{r}
 # Heatmap + boxplot for top rule class 0
 plotRule(selected_positions, rules_0, type = "heatmap", discrete = FALSE, ind = top_0)
 plotRule(selected_positions, rules_0, type = "boxplot", discrete = FALSE, ind = top_0)
@@ -118,8 +153,8 @@ plotRule(selected_positions, rules_1, type = "boxplot", discrete = FALSE, ind = 
 
 ### Run Genetic Reducer Alternative
 ```{r}
-ros2 <- rosetta(selected_positions, reducer = "Genetic", GeneticParam = list(Modulo=TRUE, BRT=FALSE, BRTprec=0.9, Precompute=FALSE, Approximate=TRUE, Fraction=0.95, Algorithm="Full"), roc = TRUE, clroc = levels(selected_positions$decision)[1])
-ros3 <- rosetta(selected_positions, reducer = "Genetic", GeneticParam = list(Modulo=TRUE, BRT=FALSE, BRTprec=0.9, Precompute=FALSE, Approximate=TRUE, Fraction=0.95, Algorithm="Simple"), roc = TRUE, clroc = levels(selected_positions$decision)[1])
+ros2 <- rosetta(selected_positions, reducer = "Genetic", GeneticParam = list(Modulo=TRUE, BRT=FALSE, BRTprec=0.9, Precompute=FALSE, Approximate=TRUE, Fraction=0.95, Algorithm="Full"), roc = TRUE, clroc = levels(selected_positions$class)[1])
+ros3 <- rosetta(selected_positions, reducer = "Genetic", GeneticParam = list(Modulo=TRUE, BRT=FALSE, BRTprec=0.9, Precompute=FALSE, Approximate=TRUE, Fraction=0.95, Algorithm="Simple"), roc = TRUE, clroc = levels(selected_positions$class)[1])
 
 rules2 <- ros2$main
 quality2 <- ros2$quality
