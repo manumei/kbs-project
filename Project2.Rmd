@@ -30,6 +30,15 @@ Refine the rule-based model based on empirical results
 
 ```
 
+# Clustering Model Rules
+
+not sure what this means yet
+
+```{r}
+
+
+```
+
 # Visualization
 
 Visualize rules (heatmaps, boxplots, VisuNet, VisuArc)
