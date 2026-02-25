@@ -1,0 +1,160 @@
+---
+title: "Project2"
+output: html_document
+---
+
+# Monte Carlo Feature Selection
+
+Identify the set of relevant features that would be used for classification
+
+```{r}
+
+install.packages("rJava")
+install.packages("rmcfs")
+library(rJava)
+library(rmcfs)
+
+# Load data
+df <- read.csv("data/clean/positions.csv")
+
+# Drop column ID
+positions <- subset(df, select = -id )
+
+# Perform monte carlo feature selection (random reducts)
+result <- mcfs(class ~ ., positions, projections = 1500, projectionSize = 0.1, splits = 5, splitSetSize = 500, cutoffPermutations = 6, threadsNumber = 8)
+
+```
+
+```{r}
+
+# Render results
+plot(result, type = "distances")
+
+# Fetch results
+result2 <- result$RI[1:result$cutoff_value,]
+
+# Keep only relevant features
+selected_positions <- positions[, colnames(positions) %in% c(result2$attribute, "class"), drop = FALSE]
+
+```
+
+# R.ROSETTA Basic Unit Test
+
+Create and train a rule-based model with the selected features 
+
+
+### Load Library
+```{r}
+set.seed(435)
+library(R.ROSETTA)
+
+# Dimensions
+dim(selected_positions)
+table(selected_positions$class)
+```
+
+### Run Johnson vs Genetic-Simple vs Genetic-Full
+
+```{r}
+ros <- rosetta(selected_positions, roc = TRUE, clroc = levels(selected_positions$decision)[1])
+
+rules <- ros$main
+quality <- ros$quality
+
+cat("Johnson - Number of rules:", nrow(rules), "\n")
+print(quality)
+```
+
+```{r}
+sig_rules <- rules[rules$pValue < 0.05, ]
+cat("Significant rules (p < 0.05):", nrow(sig_rules), "/", nrow(rules), "\n\n")
+tabS <- table(sig_rules$decision)
+print(tabS)
+
+for (cls in levels(selected_positions$decision)) {
+  pct <- tabS[cls] / sum(rules$decision == cls) * 100
+    cat("% significant for class", cls, ":", round(pct, 1), "%\n")
+}
+
+# Top rules for each decision class
+for (cls in levels(selected_positions$decision)) {
+    cat("\n--- Top rules for class:", cls, "---\n")
+    cls_rules <- rules[rules$decision == cls, ]
+    print(viewRules(cls_rules[1:min(10, nrow(cls_rules)), ]))
+}
+
+plotMeanROC(ros)
+
+gf <- getFeatures(rules, filter = TRUE, filterType = "pvalue", thr = 0.05)
+print(gf$features)
+
+genesAvian  <- gf$features$Avian          # Features occurring in significant avian rules.
+genesHuman <- gf$features$Human         # Features occurring in significant human rules.
+
+rec_rules <- recalculateRules(selected_positions, rules)
+
+# Top rule for class 0
+rules_0 <- rec_rules[rec_rules$decision == "0", ]
+top_0 <- which.min(rules_0$pValue)
+cat("Top rule for class 0 - p =", rules_0$pValue[top_0], "\n")
+print(viewRules(rules_0[top_0, ]))
+
+# Top rule for class 1
+rules_1 <- rec_rules[rec_rules$decision == "1", ]
+top_1 <- which.min(rules_1$pValue)
+cat("\nTop rule for class 1 - p =", rules_1$pValue[top_1], "\n")
+print(viewRules(rules_1[top_1, ]))
+
+# Heatmap + boxplot for top rule class 0
+plotRule(selected_positions, rules_0, type = "heatmap", discrete = FALSE, ind = top_0)
+plotRule(selected_positions, rules_0, type = "boxplot", discrete = FALSE, ind = top_0)
+
+# Heatmap + boxplot for top rule class 1
+plotRule(selected_positions, rules_1, type = "heatmap", discrete = FALSE, ind = top_1)
+plotRule(selected_positions, rules_1, type = "boxplot", discrete = FALSE, ind = top_1)
+```
+
+
+### Run Genetic Reducer Alternative
+```{r}
+ros2 <- rosetta(selected_positions, reducer = "Genetic", GeneticParam = list(Modulo=TRUE, BRT=FALSE, BRTprec=0.9, Precompute=FALSE, Approximate=TRUE, Fraction=0.95, Algorithm="Full"), roc = TRUE, clroc = levels(selected_positions$decision)[1])
+ros3 <- rosetta(selected_positions, reducer = "Genetic", GeneticParam = list(Modulo=TRUE, BRT=FALSE, BRTprec=0.9, Precompute=FALSE, Approximate=TRUE, Fraction=0.95, Algorithm="Simple"), roc = TRUE, clroc = levels(selected_positions$decision)[1])
+
+rules2 <- ros2$main
+quality2 <- ros2$quality
+
+rules3 <- ros3$main
+quality3 <- ros3$quality
+
+cat("Genetic (Full) - Number of rules:", nrow(rules2), "\n")
+print(quality2)
+
+cat("Genetic (Simple) - Number of rules:", nrow(rules3), "\n")
+print(quality3)
+```
+
+# Optimize Model Parmeters
+
+Refine the rule-based model based on empirical results
+
+```{r}
+
+```
+
+# Clustering Model Rules
+
+Show clustering with heatmap
+
+```{r}
+
+```
+
+# Visualization
+
+Visualize rules (boxplots, VisuNet, VisuArc)
+
+```{r}
+
+
+```
+
