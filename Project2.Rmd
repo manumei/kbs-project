@@ -9,6 +9,32 @@ Identify the set of relevant features that would be used for classification
 
 ```{r}
 
+install.packages("rJava")
+install.packages("rmcfs")
+library(rJava)
+library(rmcfs)
+
+# Load data
+df <- read.csv("data/clean/positions.csv")
+
+# Drop column ID
+positions <- subset(df, select = -id )
+
+# Perform monte carlo feature selection (random reducts)
+result <- mcfs(class ~ ., positions, projections = 1500, projectionSize = 0.1, splits = 5, splitSetSize = 500, cutoffPermutations = 6, threadsNumber = 8)
+
+```
+
+```{r}
+
+# Render results
+plot(result, type = "distances")
+
+# Fetch results
+result2 <- result$RI[1:result$cutoff_value,]
+
+# Keep only relevant features
+selected_positions <- positions[, colnames(positions) %in% c(result2$attribute, "class"), drop = FALSE]
 
 ```
 
@@ -17,6 +43,7 @@ Identify the set of relevant features that would be used for classification
 Create and train a rule-based model with the selected features 
 
 ```{r}
+
 
 
 ```
@@ -32,7 +59,7 @@ Refine the rule-based model based on empirical results
 
 # Clustering Model Rules
 
-not sure what this means yet
+Show clustering with heatmap
 
 ```{r}
 
@@ -41,7 +68,7 @@ not sure what this means yet
 
 # Visualization
 
-Visualize rules (heatmaps, boxplots, VisuNet, VisuArc)
+Visualize rules (boxplots, VisuNet, VisuArc)
 
 ```{r}
 
