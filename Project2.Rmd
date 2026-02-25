@@ -3,41 +3,39 @@ title: "Project2"
 output: html_document
 ---
 
-# rmcfs
-# identify the set of relevant features that would be used for classification
+# Monte Carlo Feature Selection
+
+Identify the set of relevant features that would be used for classification
 
 ```{r}
 
 
 ```
 
-# R.ROSETTA
-# create and train a rule-based model with the selected features 
+# R.ROSETTA Basic Unit Test
+
+Create and train a rule-based model with the selected features 
 
 ```{r}
 
 
 ```
 
-# clustering of model rules
-# evaluate and refine your model 
+# Optimize Model Parmeters
+
+Refine the rule-based model based on empirical results
 
 ```{r}
 
 
 ```
 
-# VisuNet
+# Visualization
+
+Visualize rules (heatmaps, boxplots, VisuNet, VisuArc)
 
 ```{r}
 
 
 ```
 
-# VisuArc
-# isualizes part of the given network and its connections derived from rules
-
-```{r}
-
-
-```
