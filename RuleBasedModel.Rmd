@@ -35,7 +35,7 @@ result2 <- result$RI[1:result$cutoff_value,]
 
 # Keep only relevant features
 selected_positions <- positions[, colnames(positions) %in% c(result2$attribute, "class"), drop = FALSE]
-
+write.csv(selected_positions, "data/clean/selected_positions.csv", row.names = FALSE)
 ```
 
 # R.ROSETTA Basic Unit Test
@@ -53,7 +53,7 @@ dim(selected_positions)
 table(selected_positions$class)
 ```
 
-### Run Johnson vs Genetic-Simple vs Genetic-Full
+### Run Basic Test
 
 ```{r}
 ros <- rosetta(selected_positions, roc = TRUE, clroc = levels(selected_positions$decision)[1])
@@ -64,6 +64,8 @@ quality <- ros$quality
 cat("Johnson - Number of rules:", nrow(rules), "\n")
 print(quality)
 ```
+
+### Basic Test Results
 
 ```{r}
 sig_rules <- rules[rules$pValue < 0.05, ]
@@ -113,7 +115,6 @@ plotRule(selected_positions, rules_0, type = "boxplot", discrete = FALSE, ind = 
 plotRule(selected_positions, rules_1, type = "heatmap", discrete = FALSE, ind = top_1)
 plotRule(selected_positions, rules_1, type = "boxplot", discrete = FALSE, ind = top_1)
 ```
-
 
 ### Run Genetic Reducer Alternative
 ```{r}

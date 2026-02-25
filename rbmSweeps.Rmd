@@ -1,5 +1,5 @@
 ---
-title: "3.3 - Parameters Grid Search"
+title: "Parameters Grid Search"
 output: html_document
 ---
 
@@ -9,23 +9,17 @@ output: html_document
 set.seed(435)
 library(R.ROSETTA)
 
-gen_data <- read.csv("data/gen_relabelled_data.csv")
+selected_positions <- read.csv("data/clean/selected_positions.csv")
 
-columns_keep <- trimws(readLines("data/columns_keep.txt"))
-columns_keep <- columns_keep[columns_keep != ""]
-
-gen_data <- gen_data[, c(columns_keep, "decision")]
-gen_data$decision <- as.factor(gen_data$decision)
-
-cat("Data:", nrow(gen_data), "rows x", ncol(gen_data), "cols\n")
-cat("Classes:", paste(names(table(gen_data$decision)), table(gen_data$decision), sep="=", collapse=", "), "\n")
+cat("Data:", nrow(selected_positions), "rows x", ncol(selected_positions), "cols\n")
+cat("Classes:", paste(names(table(selected_positions$class)), table(selected_positions$class), sep="=", collapse=", "), "\n")
 ```
 
 # ============================================================
 # GRID SEARCH 1: Johnson BRT / BRTprec / Fraction (64 configs)
 # ============================================================
 
-# Cell 2: Build Grid 1
+# Build Grid 1
 
 ```{r}
 # BRT=FALSE: BRTprec irrelevant → use 0 as placeholder, 1 row × 8 Fraction = 8
@@ -53,7 +47,7 @@ grid1 <- rbind(grid1_brt_false, grid1_brt_true)
 cat("Grid 1 configs:", nrow(grid1), "\n")
 ```
 
-# Cell 3: Run Grid 1
+# Run Grid 1
 
 ```{r}
 results1 <- data.frame(
@@ -81,7 +75,7 @@ for (i in 1:nrow(grid1)) {
   )
 
   ros <- tryCatch(
-    rosetta(gen_data,
+    rosetta(selected_positions,
             reducer = "Johnson",
             JohnsonParam = jp,
             roc = FALSE,
@@ -90,7 +84,7 @@ for (i in 1:nrow(grid1)) {
   )
 
   if (!is.null(ros)) {
-    rec <- recalculateRules(gen_data, ros$main)
+    rec <- recalculateRules(selected_positions, ros$main)
     sig <- sum(rec$pValue < 0.05, na.rm = TRUE)
     results1 <- rbind(results1, data.frame(
       BRT          = cfg$BRT,
@@ -117,7 +111,7 @@ for (i in 1:nrow(grid1)) {
 cat("\nGrid 1 complete.\n")
 ```
 
-# Cell 4: Grid 1 Results
+# Grid 1 Results
 
 ```{r}
 results1 <- results1[order(-results1$accuracyMean, na.last = TRUE), ]
@@ -146,7 +140,7 @@ best_jp <- list(
 # GRID SEARCH 2: DiscreteMethod / DiscreteParam / reducerDiscernibility / underSample (256 configs)
 # ============================================================
 
-# Cell 5: Build Grid 2
+# Build Grid 2
 
 ```{r}
 # underSample=FALSE: underSampleNum irrelevant → 1 value, 4×8×2×1 = 64
@@ -180,7 +174,7 @@ grid2 <- rbind(grid2_no_us, grid2_us)
 cat("Grid 2 configs:", nrow(grid2), "\n")
 ```
 
-# Cell 6: Run Grid 2
+# Run Grid 2
 
 ```{r}
 results2 <- data.frame(
@@ -203,7 +197,7 @@ for (i in 1:nrow(grid2)) {
 
   ros <- tryCatch({
     if (cfg$underSample) {
-      rosetta(gen_data,
+      rosetta(selected_positions,
               reducer = "Johnson",
               JohnsonParam = best_jp,
               discreteMethod = cfg$discreteMethod,
@@ -215,7 +209,7 @@ for (i in 1:nrow(grid2)) {
               roc = FALSE,
               seed = 435)
     } else {
-      rosetta(gen_data,
+      rosetta(selected_positions,
               reducer = "Johnson",
               JohnsonParam = best_jp,
               discreteMethod = cfg$discreteMethod,
@@ -230,7 +224,7 @@ for (i in 1:nrow(grid2)) {
   )
 
   if (!is.null(ros)) {
-    rec <- recalculateRules(gen_data, ros$main)
+    rec <- recalculateRules(selected_positions, ros$main)
     sig <- sum(rec$pValue < 0.05, na.rm = TRUE)
     results2 <- rbind(results2, data.frame(
       discreteMethod        = cfg$discreteMethod,
@@ -261,7 +255,7 @@ for (i in 1:nrow(grid2)) {
 cat("\nGrid 2 complete.\n")
 ```
 
-# Cell 7: Grid 2 Results
+# Grid 2 Results
 
 ```{r}
 results2 <- results2[order(-results2$accuracyMean, na.last = TRUE), ]
@@ -290,7 +284,7 @@ best2_underSampleNum        <- best2$underSampleNum
 # GRID SEARCH 3: Rule Filtration (126 configs)
 # ============================================================
 
-# Cell 8: Build Grid 3
+# Build Grid 3
 
 ```{r}
 # ruleFiltration=FALSE: 1 config
@@ -317,13 +311,13 @@ grid3_true <- expand.grid(
 cat("Grid 3 configs: 1 (no filtration) +", nrow(grid3_true), "(with filtration) =", 1 + nrow(grid3_true), "\n")
 ```
 
-# Cell 9: Run Grid 3 — No Filtration Baseline
+# Run Grid 3 — No Filtration Baseline
 
 ```{r}
 # Helper to run rosetta with best params from Grid 1 + Grid 2
-run_with_best <- function(gen_data, best_jp, best2, filt, filt_supp, filt_acc, filt_cov) {
+run_with_best <- function(selected_positions, best_jp, best2, filt, filt_supp, filt_acc, filt_cov) {
   if (best2$underSample) {
-    rosetta(gen_data,
+    rosetta(selected_positions,
             reducer = "Johnson",
             JohnsonParam = best_jp,
             discreteMethod = best2$discreteMethod,
@@ -339,7 +333,7 @@ run_with_best <- function(gen_data, best_jp, best2, filt, filt_supp, filt_acc, f
             roc = FALSE,
             seed = 435)
   } else {
-    rosetta(gen_data,
+    rosetta(selected_positions,
             reducer = "Johnson",
             JohnsonParam = best_jp,
             discreteMethod = best2$discreteMethod,
@@ -369,7 +363,7 @@ results3 <- data.frame(
 # Run baseline: no filtration
 cat("Grid3 1/126 — ruleFiltration=FALSE\n")
 ros <- tryCatch(
-  run_with_best(gen_data, best_jp, best2,
+  run_with_best(selected_positions, best_jp, best2,
                 filt = FALSE,
                 filt_supp = c(0, 0),
                 filt_acc  = c(0, 0),
@@ -378,7 +372,7 @@ ros <- tryCatch(
 )
 
 if (!is.null(ros)) {
-  rec <- recalculateRules(gen_data, ros$main)
+  rec <- recalculateRules(selected_positions, ros$main)
   sig <- sum(rec$pValue < 0.05, na.rm = TRUE)
   results3 <- rbind(results3, data.frame(
     ruleFiltration = FALSE,
@@ -406,7 +400,7 @@ if (!is.null(ros)) {
 cat("Baseline done.\n")
 ```
 
-# Cell 10: Run Grid 3 — With Filtration (125 configs)
+# Run Grid 3 — With Filtration (125 configs)
 
 ```{r}
 for (i in 1:nrow(grid3_true)) {
@@ -425,7 +419,7 @@ for (i in 1:nrow(grid3_true)) {
               paste(c_val, collapse=",")))
 
   ros <- tryCatch(
-    run_with_best(gen_data, best_jp, best2,
+    run_with_best(selected_positions, best_jp, best2,
                   filt = TRUE,
                   filt_supp = s_val,
                   filt_acc  = a_val,
@@ -434,7 +428,7 @@ for (i in 1:nrow(grid3_true)) {
   )
 
   if (!is.null(ros)) {
-    rec <- recalculateRules(gen_data, ros$main)
+    rec <- recalculateRules(selected_positions, ros$main)
     sig <- sum(rec$pValue < 0.05, na.rm = TRUE)
     results3 <- rbind(results3, data.frame(
       ruleFiltration = TRUE,
@@ -463,7 +457,7 @@ for (i in 1:nrow(grid3_true)) {
 cat("\nGrid 3 complete.\n")
 ```
 
-# Cell 11: Grid 3 Results
+# Grid 3 Results
 
 ```{r}
 results3 <- results3[order(-results3$accuracyMean, na.last = TRUE), ]
@@ -485,7 +479,7 @@ cat("  Accuracy:", best3$accuracyMean, " Rules:", best3$nRules, "(", best3$nSigR
 # FINAL SUMMARY
 # ============================================================
 
-# Cell 12: Print Best Overall Configuration
+# Print Best Overall Configuration
 
 ```{r}
 cat("====================================================\n")
@@ -550,7 +544,7 @@ cat("=== Johnson vs Genetic on best config ===\n\n")
 
 # --- Johnson ---
 cat("Running Johnson...\n")
-ros_johnson <- rosetta(gen_data,
+ros_johnson <- rosetta(selected_positions,
     reducer = "Johnson",
     JohnsonParam = best_config$jp,
     discreteMethod = best_config$discreteMethod,
@@ -564,7 +558,7 @@ ros_johnson <- rosetta(gen_data,
     ruleFiltrAccuracy = best_config$ruleFiltrAccuracy,
     ruleFiltrCoverage = best_config$ruleFiltrCoverage,
     roc = TRUE,
-    clroc = levels(gen_data$decision)[1],
+    clroc = levels(selected_positions$class)[1],
     seed = 435)
 
 # --- Genetic (same params, swap reducer + GeneticParam) ---
@@ -579,7 +573,7 @@ gp <- list(
   Algorithm   = "Simple"
 )
 
-ros_genetic <- rosetta(gen_data,
+ros_genetic <- rosetta(selected_positions,
     reducer = "Genetic",
     GeneticParam = gp,
     discreteMethod = best_config$discreteMethod,
@@ -593,7 +587,7 @@ ros_genetic <- rosetta(gen_data,
     ruleFiltrAccuracy = best_config$ruleFiltrAccuracy,
     ruleFiltrCoverage = best_config$ruleFiltrCoverage,
     roc = TRUE,
-    clroc = levels(gen_data$decision)[1],
+    clroc = levels(selected_positions$class)[1],
     seed = 435)
 
 # --- Genetic (same params, swap reducer + GeneticParam) ---
@@ -608,7 +602,7 @@ gp_full <- list(
   Algorithm   = "Full"
 )
 
-ros_genetic <- rosetta(gen_data,
+ros_genetic <- rosetta(selected_positions,
     reducer = "Genetic",
     GeneticParam = gp_full,
     discreteMethod = best_config$discreteMethod,
@@ -622,7 +616,7 @@ ros_genetic <- rosetta(gen_data,
     ruleFiltrAccuracy = best_config$ruleFiltrAccuracy,
     ruleFiltrCoverage = best_config$ruleFiltrCoverage,
     roc = TRUE,
-    clroc = levels(gen_data$decision)[1],
+    clroc = levels(selected_positions$class)[1],
     seed = 435)
 
 # --- Compare ---
