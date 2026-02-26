@@ -79,12 +79,13 @@ for (i in 1:nrow(grid1)) {
                 reducer = "Johnson",
                 JohnsonParam = jp,
                 reducerDiscernibility = cfg$reducerDiscernibility,
-                roc = FALSE),
+                roc = FALSE,
+                discrete=TRUE),
         error = function(e) { cat("  ERROR:", e$message, "\n"); NULL }
     )
 
     if (!is.null(ros)) {
-        rec <- recalculateRules(selected_positions, ros$main)
+        rec <- recalculateRules(selected_positions, ros$main, discrete=TRUE)
         sig <- sum(rec$pValue < 0.05, na.rm = TRUE)
         results1 <- rbind(results1, data.frame(
         BRT                   = cfg$BRT,
@@ -140,20 +141,16 @@ best1_discern <- best1$reducerDiscernibility
 ```
 
 # ============================================================
-# GRID SEARCH 2: DiscreteMethod / DiscreteParam / reducerDiscernibility / underSample (256 configs)
+# GRID SEARCH 2: reducerDiscernibility / underSample (256 configs)
 # ============================================================
 
 # Cell 5: Build Grid 2
 
 ```{r}
-discreteMethod_vals <- c("EqualFrequency", "MDL", "Naive", "SemiNaive")
-discreteParam_vals  <- c(2, 3, 4, 5, 6, 7, 8, 10)
 classifier_vals     <- c("StandardVoter", "ObjectTrackingVoter", "NaiveBayesClassifier")
 underSampleNum_vals <- c(0, 100)
 
 grid2_no_us <- expand.grid(
-    discreteMethod = discreteMethod_vals,
-    discreteParam  = discreteParam_vals,
     classifier     = classifier_vals,
     underSample    = FALSE,
     underSampleNum = 0,
@@ -161,8 +158,6 @@ grid2_no_us <- expand.grid(
 )
 
 grid2_us <- expand.grid(
-    discreteMethod = discreteMethod_vals,
-    discreteParam  = discreteParam_vals,
     classifier     = classifier_vals,
     underSample    = TRUE,
     underSampleNum = underSampleNum_vals,
@@ -177,8 +172,6 @@ cat("Grid 2 configs:", nrow(grid2), "\n")
 
 ```{r}
 results2 <- data.frame(
-    discreteMethod = character(),
-    discreteParam  = integer(),
     classifier     = character(),
     underSample    = logical(),
     underSampleNum = integer(),
@@ -191,8 +184,7 @@ results2 <- data.frame(
 for (i in 1:nrow(grid2)) {
     cfg <- grid2[i, ]
     cat(sprintf("Grid2 %d/%d — %s param=%d cls=%s US=%s USnum=%d\n",
-                i, nrow(grid2), cfg$discreteMethod, cfg$discreteParam,
-                cfg$classifier, cfg$underSample, cfg$underSampleNum))
+                i, nrow(grid2), cfg$classifier, cfg$underSample, cfg$underSampleNum))
 
     ros <- tryCatch({
         if (cfg$underSample) {
@@ -200,20 +192,18 @@ for (i in 1:nrow(grid2)) {
                 reducer = "Johnson",
                 JohnsonParam = best_jp,
                 reducerDiscernibility = best1_discern,
-                discreteMethod = cfg$discreteMethod,
-                discreteParam = cfg$discreteParam,
+                discrete = TRUE,
                 classifier = cfg$classifier,
                 underSample = TRUE,
                 underSampleNum = cfg$underSampleNum,
                 underSampleSize = 0,
-                roc = FALSE)
+                roc = FALSE,)
         } else {
         rosetta(selected_positions,
                 reducer = "Johnson",
                 JohnsonParam = best_jp,
                 reducerDiscernibility = best1_discern,
-                discreteMethod = cfg$discreteMethod,
-                discreteParam = cfg$discreteParam,
+                discrete = TRUE,
                 classifier = cfg$classifier,
                 underSample = FALSE,
                 roc = FALSE)
@@ -223,11 +213,9 @@ for (i in 1:nrow(grid2)) {
     )
 
     if (!is.null(ros)) {
-        rec <- recalculateRules(selected_positions, ros$main)
+        rec <- recalculateRules(selected_positions, ros$main, discrete=TRUE)
         sig <- sum(rec$pValue < 0.05, na.rm = TRUE)
         results2 <- rbind(results2, data.frame(
-        discreteMethod = cfg$discreteMethod,
-        discreteParam  = cfg$discreteParam,
         classifier     = cfg$classifier,
         underSample    = cfg$underSample,
         underSampleNum = cfg$underSampleNum,
@@ -238,8 +226,6 @@ for (i in 1:nrow(grid2)) {
         ))
     } else {
         results2 <- rbind(results2, data.frame(
-        discreteMethod = cfg$discreteMethod,
-        discreteParam  = cfg$discreteParam,
         classifier     = cfg$classifier,
         underSample    = cfg$underSample,
         underSampleNum = cfg$underSampleNum,
@@ -265,15 +251,11 @@ print(results2[1:min(15, nrow(results2)), ], row.names = FALSE)
 
 best2 <- results2[1, ]
 cat("\nBest Grid 2 config:\n")
-cat("  discreteMethod:", best2$discreteMethod, "\n")
-cat("  discreteParam:", best2$discreteParam, "\n")
 cat("  reducerDiscernibility:", best2$reducerDiscernibility, "\n")
 cat("  underSample:", best2$underSample, " underSampleNum:", best2$underSampleNum, "\n")
 cat("  Accuracy:", best2$accuracyMean, " Rules:", best2$nRules, "(", best2$nSigRules, "sig)\n")
 
 # Store best params for Grid 3
-best2_discreteMethod        <- best2$discreteMethod
-best2_discreteParam         <- best2$discreteParam
 best2_classifier            <- best2$classifier
 best2_underSample           <- best2$underSample
 best2_underSampleNum        <- best2$underSampleNum
@@ -319,8 +301,7 @@ run_with_best <- function(selected_positions, best_jp, best2, best1_discern, fil
             reducer = "Johnson",
             JohnsonParam = best_jp,
             reducerDiscernibility = best1_discern,
-            discreteMethod = best2$discreteMethod,
-            discreteParam = best2$discreteParam,
+            discrete = TRUE,
             classifier = best2$classifier,
             underSample = TRUE,
             underSampleNum = best2$underSampleNum,
@@ -335,8 +316,7 @@ run_with_best <- function(selected_positions, best_jp, best2, best1_discern, fil
             reducer = "Johnson",
             JohnsonParam = best_jp,
             reducerDiscernibility = best1_discern,
-            discreteMethod = best2$discreteMethod,
-            discreteParam = best2$discreteParam,
+            discrete = TRUE,
             classifier = best2$classifier,
             underSample = FALSE,
             ruleFiltration = filt,
@@ -369,7 +349,7 @@ ros <- tryCatch(
 )
 
 if (!is.null(ros)) {
-  rec <- recalculateRules(selected_positions, ros$main)
+  rec <- recalculateRules(selected_positions, ros$main, discrete=TRUE)
   sig <- sum(rec$pValue < 0.05, na.rm = TRUE)
   results3 <- rbind(results3, data.frame(
     ruleFiltration = FALSE,
@@ -425,7 +405,7 @@ for (i in 1:nrow(grid3_true)) {
     )
 
     if (!is.null(ros)) {
-        rec <- recalculateRules(selected_positions, ros$main)
+        rec <- recalculateRules(selected_positions, ros$main, discrete=TRUE)
         sig <- sum(rec$pValue < 0.05, na.rm = TRUE)
         results3 <- rbind(results3, data.frame(
         ruleFiltration = TRUE,
@@ -493,8 +473,6 @@ cat("  Fraction:            ", best1$Fraction, "\n")
 cat("  reducerDiscernibility:", best1_discern, "\n\n")
 
 cat("--- Discretization, Classifier & Sampling (Grid 2) ---\n")
-cat("  discreteMethod:      ", best2$discreteMethod, "\n")
-cat("  discreteParam:       ", best2$discreteParam, "\n")
 cat("  classifier:          ", best2$classifier, "\n")
 cat("  underSample:         ", best2$underSample, "\n")
 if (best2$underSample) cat("  underSampleNum:      ", best2$underSampleNum, "\n")
@@ -523,8 +501,6 @@ best_filt_cov   <- eval(parse(text = best3$filtrCoverage))
 best_config <- list(
     jp                    = best_jp,
     reducerDiscernibility = best1_discern,
-    discreteMethod        = best2$discreteMethod,
-    discreteParam         = best2$discreteParam,
     classifier            = best2$classifier,
     underSample           = best2$underSample,
     underSampleNum        = best2$underSampleNum,
@@ -544,8 +520,7 @@ ros_johnson <- rosetta(selected_positions,
     reducer = "Johnson",
     JohnsonParam = best_config$jp,
     reducerDiscernibility = best_config$reducerDiscernibility,
-    discreteMethod = best_config$discreteMethod,
-    discreteParam = best_config$discreteParam,
+    discrete = TRUE,
     classifier = best_config$classifier,
     underSample = best_config$underSample,
     underSampleNum = best_config$underSampleNum,
@@ -572,8 +547,7 @@ ros_genetic_simple <- rosetta(selected_positions,
     reducer = "Genetic",
     GeneticParam = gp_simple,
     reducerDiscernibility = best_config$reducerDiscernibility,
-    discreteMethod = best_config$discreteMethod,
-    discreteParam = best_config$discreteParam,
+    discrete = TRUE,
     classifier = best_config$classifier,
     underSample = best_config$underSample,
     underSampleNum = best_config$underSampleNum,
