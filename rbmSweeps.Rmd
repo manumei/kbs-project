@@ -148,7 +148,7 @@ best1_discern <- best1$reducerDiscernibility
 
 ```{r}
 classifier_vals     <- c("StandardVoter", "ObjectTrackingVoter", "NaiveBayesClassifier")
-underSampleNum_vals <- c(0, 100)
+underSampleNum_vals <- c(0, 100, 250)
 
 grid2_no_us <- expand.grid(
     classifier     = classifier_vals,
@@ -183,7 +183,7 @@ results2 <- data.frame(
 
 for (i in 1:nrow(grid2)) {
     cfg <- grid2[i, ]
-    cat(sprintf("Grid2 %d/%d — %s param=%d cls=%s US=%s USnum=%d\n",
+    cat(sprintf("Grid2 %d/%d — cls=%s US=%s USnum=%d\n",
                 i, nrow(grid2), cfg$classifier, cfg$underSample, cfg$underSampleNum))
 
     ros <- tryCatch({
@@ -510,6 +510,31 @@ best_config <- list(
     ruleFiltrCoverage     = best_filt_cov
 )
 ```
+
+====================================================
+       BEST CONFIGURATION ACROSS ALL 3 GRIDS        
+====================================================
+
+--- Johnson Reducer Params (Grid 1) ---
+  Modulo:               TRUE
+  BRT:                  TRUE 
+  BRTprec:              0.6 
+  Precompute:           FALSE
+  Approximate:          TRUE
+  Fraction:             0.99 
+  reducerDiscernibility: Object 
+
+--- Discretization, Classifier & Sampling (Grid 2) ---
+  classifier:           StandardVoter 
+  underSample:          FALSE 
+
+--- Rule Filtration (Grid 3) ---
+  ruleFiltration:       FALSE 
+
+--- Performance ---
+  Grid 1 best accuracy: 0.962092 
+  Grid 2 best accuracy: 0.962092 
+  Grid 3 best accuracy: 0.962092 
 
 # Cell 13: Genetic
 ```{r}
