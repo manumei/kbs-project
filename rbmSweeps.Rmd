@@ -588,4 +588,7 @@ cat("\n--- Johnson ---\n")
 print(ros_johnson$quality)
 cat("Rules:", nrow(ros_johnson$main), "\n")
 
+cat("\n--- Genetic ---\n")
+print(ros_genetic_simple$quality)
+cat("Rules:", nrow(ros_genetic_simple$main), "\n")
 ```
