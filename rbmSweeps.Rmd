@@ -119,8 +119,8 @@ cat("\nGrid 1 complete.\n")
 results1 <- results1[order(-results1$accuracyMean, na.last = TRUE), ]
 rownames(results1) <- NULL
 
-cat("=== Grid 1: Top 5 by mean accuracy ===\n\n")
-print(results1[1:min(5, nrow(results1)), ], row.names = FALSE)
+cat("=== Grid 1: Top 15 by mean accuracy ===\n\n")
+print(results1[1:min(15, nrow(results1)), ], row.names = FALSE)
 
 best1 <- results1[1, ]
 cat("\nBest Grid 1 config:\n")
@@ -260,8 +260,8 @@ cat("\nGrid 2 complete.\n")
 results2 <- results2[order(-results2$accuracyMean, na.last = TRUE), ]
 rownames(results2) <- NULL
 
-cat("=== Grid 2: Top 5 by mean accuracy ===\n\n")
-print(results2[1:min(5, nrow(results2)), ], row.names = FALSE)
+cat("=== Grid 2: Top 15 by mean accuracy ===\n\n")
+print(results2[1:min(15, nrow(results2)), ], row.names = FALSE)
 
 best2 <- results2[1, ]
 cat("\nBest Grid 2 config:\n")
@@ -329,8 +329,7 @@ run_with_best <- function(selected_positions, best_jp, best2, best1_discern, fil
             ruleFiltrSupport = filt_supp,
             ruleFiltrAccuracy = filt_acc,
             ruleFiltrCoverage = filt_cov,
-            roc = FALSE,
-            seed = 435)
+            roc = FALSE)
   } else {
     rosetta(selected_positions,
             reducer = "Johnson",
@@ -344,8 +343,7 @@ run_with_best <- function(selected_positions, best_jp, best2, best1_discern, fil
             ruleFiltrSupport = filt_supp,
             ruleFiltrAccuracy = filt_acc,
             ruleFiltrCoverage = filt_cov,
-            roc = FALSE,
-            seed = 435)
+            roc = FALSE)
   }
 }
 
@@ -462,8 +460,8 @@ cat("\nGrid 3 complete.\n")
 results3 <- results3[order(-results3$accuracyMean, na.last = TRUE), ]
 rownames(results3) <- NULL
 
-cat("=== Grid 3: Top 5 by mean accuracy ===\n\n")
-print(results3[1:min(5, nrow(results3)), ], row.names = FALSE)
+cat("=== Grid 3: Top 15 by mean accuracy ===\n\n")
+print(results3[1:min(15, nrow(results3)), ], row.names = FALSE)
 
 best3 <- results3[1, ]
 cat("\nBest Grid 3 config:\n")
@@ -587,38 +585,8 @@ ros_genetic_simple <- rosetta(selected_positions,
     roc = TRUE,
     clroc = levels(selected_positions$decision)[1])
 
-gp_full <- list(
-    Modulo      = best_config$jp$Modulo,
-    BRT         = best_config$jp$BRT,
-    BRTprec     = best_config$jp$BRTprec,
-    Precompute  = best_config$jp$Precompute,
-    Approximate = best_config$jp$Approximate,
-    Fraction    = best_config$jp$Fraction,
-    Algorithm   = "Full"
-)
-
-ros_genetic_simple <- rosetta(selected_positions,
-    reducer = "Genetic",
-    GeneticParam = gp_full,
-    reducerDiscernibility = best_config$reducerDiscernibility,
-    discreteMethod = best_config$discreteMethod,
-    discreteParam = best_config$discreteParam,
-    classifier = best_config$classifier,
-    underSample = best_config$underSample,
-    underSampleNum = best_config$underSampleNum,
-    underSampleSize = 0,
-    ruleFiltration = best_config$ruleFiltration,
-    ruleFiltrSupport = best_config$ruleFiltrSupport,
-    ruleFiltrAccuracy = best_config$ruleFiltrAccuracy,
-    ruleFiltrCoverage = best_config$ruleFiltrCoverage,
-    roc = TRUE,
-    clroc = levels(selected_positions$decision)[1])
-
 cat("\n--- Johnson ---\n")
 print(ros_johnson$quality)
 cat("Rules:", nrow(ros_johnson$main), "\n")
 
-cat("\n--- Genetic ---\n")
-print(ros_genetic_simple$quality)
-cat("Rules:", nrow(ros_genetic_simple$main), "\n")
 ```
