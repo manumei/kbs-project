@@ -26,7 +26,7 @@ best_johnson_param <- list(
 )
 
 cat("Final Model\n")
-ros_final <- rosetta(selected_positions,
+ros <- rosetta(selected_positions,
     reducer = "Johnson",
     JohnsonParam = best_johnson_param,
     reducerDiscernibility = "Object",
@@ -35,20 +35,106 @@ ros_final <- rosetta(selected_positions,
     underSample = FALSE,
     roc = TRUE,
     clroc = levels(selected_positions$decision)[1])
+
+rules <- ros$main
+quality <- ros$quality
+
+cat("Johnson - Number of rules:", nrow(rules), "\n")
+print(quality)
+
+# print top 15 rules
+rlsAut <- viewRules(rules[rules$decision=="Human",])
+print(rlsAut[1:15,])
 ```
+
+# Significant Rules
+```{r}
+sig_rules <- rules[rules$pValue < 0.05, ]
+cat("Significant rules (p < 0.05):", nrow(sig_rules), "/", nrow(rules), "\n\n")
+tabS <- table(sig_rules$decision)
+print(tabS)
+for (cls in levels(selected_positions$class)) {
+  pct <- tabS[cls] / sum(rules$decision == cls) * 100
+    cat("% significant for class", cls, ":", round(pct, 1), "%\n")
+}
+```
+
+# Top Rules by Class
+```{r}
+# Top rules for each decision class
+for (cls in levels(selected_positions$class)) {
+    cat("\n--- Top rules for class:", cls, "---\n")
+    cls_rules <- rules[rules$decision == cls, ]
+    print(viewRules(cls_rules[1:min(10, nrow(cls_rules)), ]))
+}
+```
+
+# ROC
+```{r}
+plotMeanROC(ros)
+```
+
+# See Unique & Shared Positions
+```{r}
+gf <- getFeatures(rules, filter = TRUE, filterType = "pvalue", thr = 0.05)
+print(gf$features)
+
+positionsAvian  <- gf$features$Avian          # Features occurring in significant avian rules.
+positionsHuman <- gf$features$Human         # Features occurring in significant human rules.
+
+commonpositions <- intersect(positionsHuman, positionsAvian)
+commonpositions
+
+uniquepositions_human <- setdiff(positionsHuman, positionsAvian)
+uniquepositions_avian <- setdiff(positionsAvian, positionsHuman)
+uniquepositions_human
+uniquepositions_avian
+```
+
+# recalculate
+```{r}
+rec_rules <- recalculateRules(selected_positions, rules, discrete=TRUE)
+```
+
+# Top Rule by class
+```{r}
+# Top rule for class 0
+rules_0 <- rec_rules[rec_rules$decision == "Avian", ]
+top_0 <- which.min(rules_0$pValue)
+cat("Top rule for class 0 - p =", rules_0$pValue[top_0], "\n")
+print(viewRules(rules_0[top_0, ]))
+
+# Top rule for class 1
+rules_1 <- rec_rules[rec_rules$decision == "Human", ]
+top_1 <- which.min(rules_1$pValue)
+cat("\nTop rule for class 1 - p =", rules_1$pValue[top_1], "\n")
+print(viewRules(rules_1[top_1, ]))
+```
+
+# Clustering Model Rules
+
+Show clustering with heatmap
 
 ```{r}
 
+#Hierarchical clustering of model rules
+#subsetting the significant rules from the recalculated rules
+sig_rec_rules <- rec_rules[rec_rules$pValue < 0.05,]
+clusterRules(selected_positions,sig_rec_rules,fontsize = 5)
 ```
 
+# Visualization
+VisuNet
+```{r}
+library(RCy3)
+library(csVisuNet)
+cytoscapePing ()
+vis <- visunetcyto(ros$main)
+```
+
+VisuArc
 ```{r}
 
+?VisuArc
 ```
 
-```{r}
-
-```
-
-```{r}
-
-```
