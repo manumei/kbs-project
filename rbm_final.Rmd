@@ -26,7 +26,7 @@ best_johnson_param <- list(
 )
 
 cat("Final Model\n")
-ros <- rosetta(selected_positions,
+ros_final <- rosetta(selected_positions,
     reducer = "Johnson",
     JohnsonParam = best_johnson_param,
     reducerDiscernibility = "Object",
@@ -34,53 +34,53 @@ ros <- rosetta(selected_positions,
     classifier = "StandardVoter",
     underSample = FALSE,
     roc = TRUE,
-    clroc = levels(selected_positions$decision)[1])
+    clroc = "Human")
 
-rules <- ros$main
-quality <- ros$quality
+rules_final <- ros_final$main
+quality <- ros_final$quality
 
-cat("Johnson - Number of rules:", nrow(rules), "\n")
+cat("Johnson - Number of rules_final:", nrow(rules_final), "\n")
 print(quality)
 
-# print top 15 rules
-rlsAut <- viewRules(rules[rules$decision=="Human",])
+# print top 15 rules_final
+rlsAut <- viewRules(rules_final[rules_final$decision=="Human",])
 print(rlsAut[1:15,])
 ```
 
-# Significant Rules
+# Significant rules_final
 ```{r}
-sig_rules <- rules[rules$pValue < 0.05, ]
-cat("Significant rules (p < 0.05):", nrow(sig_rules), "/", nrow(rules), "\n\n")
+sig_rules <- rules_final[rules_final$pValue < 0.05, ]
+cat("Significant rules_final (p < 0.05):", nrow(sig_rules), "/", nrow(rules_final), "\n\n")
 tabS <- table(sig_rules$decision)
 print(tabS)
 for (cls in levels(selected_positions$class)) {
-  pct <- tabS[cls] / sum(rules$decision == cls) * 100
+  pct <- tabS[cls] / sum(rules_final$decision == cls) * 100
     cat("% significant for class", cls, ":", round(pct, 1), "%\n")
 }
 ```
 
-# Top Rules by Class
+# Top rules_final by Class
 ```{r}
-# Top rules for each decision class
+# Top rules_final for each decision class
 for (cls in levels(selected_positions$class)) {
-    cat("\n--- Top rules for class:", cls, "---\n")
-    cls_rules <- rules[rules$decision == cls, ]
+    cat("\n--- Top rules_final for class:", cls, "---\n")
+    cls_rules <- rules_final[rules_final$decision == cls, ]
     print(viewRules(cls_rules[1:min(10, nrow(cls_rules)), ]))
 }
 ```
 
 # ROC
 ```{r}
-plotMeanROC(ros)
+plotMeanROC(ros_final)
 ```
 
 # See Unique & Shared Positions
 ```{r}
-gf <- getFeatures(rules, filter = TRUE, filterType = "pvalue", thr = 0.05)
+gf <- getFeatures(rules_final, filter = TRUE, filterType = "pvalue", thr = 0.05)
 print(gf$features)
 
-positionsAvian  <- gf$features$Avian          # Features occurring in significant avian rules.
-positionsHuman <- gf$features$Human         # Features occurring in significant human rules.
+positionsAvian  <- gf$features$Avian          # Features occurring in significant avian rules_final.
+positionsHuman <- gf$features$Human         # Features occurring in significant human rules_final.
 
 commonpositions <- intersect(positionsHuman, positionsAvian)
 commonpositions
@@ -93,7 +93,7 @@ uniquepositions_avian
 
 # recalculate
 ```{r}
-rec_rules <- recalculateRules(selected_positions, rules, discrete=TRUE)
+rec_rules <- recalculateRules(selected_positions, rules_final, discrete=TRUE)
 ```
 
 # Top Rule by class
@@ -111,14 +111,14 @@ cat("\nTop rule for class 1 - p =", rules_1$pValue[top_1], "\n")
 print(viewRules(rules_1[top_1, ]))
 ```
 
-# Clustering Model Rules
+# Clustering Model rules_final
 
 Show clustering with heatmap
 
 ```{r}
 
-#Hierarchical clustering of model rules
-#subsetting the significant rules from the recalculated rules
+#Hierarchical clustering of model rules_final
+#subsetting the significant rules_final from the recalculated rules_final
 sig_rec_rules <- rec_rules[rec_rules$pValue < 0.05,]
 clusterRules(selected_positions,sig_rec_rules,fontsize = 5)
 ```
@@ -129,12 +129,16 @@ VisuNet
 library(RCy3)
 library(csVisuNet)
 cytoscapePing ()
-vis <- visunetcyto(ros$main)
+vis <- visunetcyto(ros_final$main)
 ```
 
 VisuArc
 ```{r}
 
-?VisuArc
+library(csVisuNet)
+library(arcdiagram)
+
+visuArc(vis, decision="Human")
+
 ```
 
