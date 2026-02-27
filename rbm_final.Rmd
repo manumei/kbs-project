@@ -16,7 +16,25 @@ cat("Classes:", paste(names(table(selected_positions$class)), table(selected_pos
 ```
 
 ```{r}
+best_johnson_param <- list(
+    Modulo = TRUE,
+    BRT = TRUE,
+    BRTprec = 0.6,
+    Precompute = FALSE,
+    Approximate = TRUE,
+    Fraction = 0.99
+)
 
+cat("Final Model\n")
+ros_final <- rosetta(selected_positions,
+    reducer = "Johnson",
+    JohnsonParam = best_johnson_param,
+    reducerDiscernibility = "Object",
+    discrete = TRUE,
+    classifier = "StandardVoter",
+    underSample = FALSE,
+    roc = TRUE,
+    clroc = levels(selected_positions$decision)[1])
 ```
 
 ```{r}
