@@ -62,11 +62,11 @@ for (cls in levels(selected_positions$class)) {
 # Top rules_final by Class
 ```{r}
 # Top rules_final for each decision class
-for (cls in levels(selected_positions$class)) {
-    cat("\n--- Top rules_final for class:", cls, "---\n")
-    cls_rules <- rules_final[rules_final$decision == cls, ]
-    print(viewRules(cls_rules[1:min(10, nrow(cls_rules)), ]))
-}
+#for (cls in levels(selected_positions$)) {
+    #cat("\n--- Top rules_final for class:", cls, "---\n")
+    #cls_rules <- rules_final[rules_final$decision == cls, ]
+    #print(viewRules(cls_rules[1:min(10, nrow(cls_rules)), ]))
+#}
 ```
 
 # ROC
