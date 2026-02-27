@@ -9,8 +9,8 @@ Identify the set of relevant features that would be used for classification
 
 ```{r}
 
-install.packages("rJava")
-install.packages("rmcfs")
+#install.packages("rJava")
+#install.packages("rmcfs")
 library(rJava)
 library(rmcfs)
 
@@ -124,29 +124,21 @@ uniquegenes <- setdiff(genesHuman, genesAvian)
 ```
 
 ```{r}
-rec_rules <- recalculateRules(selected_positions, rules)
+rec_rules <- recalculateRules(selected_positions, rules, discrete=TRUE)
 ```
 
 ```{r}
 # Top rule for class 0
-rules_0 <- rec_rules[rec_rules$decision == "0", ]
+rules_0 <- rec_rules[rec_rules$decision == "Avian", ]
 top_0 <- which.min(rules_0$pValue)
 cat("Top rule for class 0 - p =", rules_0$pValue[top_0], "\n")
 print(viewRules(rules_0[top_0, ]))
 
 # Top rule for class 1
-rules_1 <- rec_rules[rec_rules$decision == "1", ]
+rules_1 <- rec_rules[rec_rules$decision == "Human", ]
 top_1 <- which.min(rules_1$pValue)
 cat("\nTop rule for class 1 - p =", rules_1$pValue[top_1], "\n")
 print(viewRules(rules_1[top_1, ]))
-```
-
-# Optimize Model Parmeters
-
-Refine the rule-based model based on empirical results
-
-```{r}
-
 ```
 
 # Clustering Model Rules
@@ -154,6 +146,11 @@ Refine the rule-based model based on empirical results
 Show clustering with heatmap
 
 ```{r}
+
+#Hierarchical clustering of model rules
+#subsetting the significant rules from the recalculated rules
+sig_rec_rules <- rec_rules[rec_rules$pValue < 0.05,]
+clusterRules(selected_positions,sig_rec_rules,fontsize = 5)
 
 ```
 
@@ -175,5 +172,6 @@ VisuArc
 
 ```{r}
 
+?VisuArc
 ```
 
