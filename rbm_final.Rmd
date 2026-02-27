@@ -1,0 +1,36 @@
+---
+title: "3.3 - Parameters Grid Search"
+output: html_document
+---
+
+# Cell 1: Setup and Data
+
+```{r}
+set.seed(435)
+library(R.ROSETTA)
+
+selected_positions <- read.csv("data/clean/selected_positions.csv")
+
+cat("Data:", nrow(selected_positions), "rows x", ncol(selected_positions), "cols\n")
+cat("Classes:", paste(names(table(selected_positions$class)), table(selected_positions$class), sep="=", collapse=", "), "\n")
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
