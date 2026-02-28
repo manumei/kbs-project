@@ -56,6 +56,11 @@ results1 <- data.frame(
     stringsAsFactors = FALSE
 )
 
+i <- 3
+cfg <- grid1[i, ]
+cat(sprintf("Grid1 %d/%d — BRT=%s BRTprec=%.2f Fraction=%.2f\n",
+            i, nrow(grid1), cfg$BRT, cfg$BRTprec, cfg$Fraction))
+
 for (i in 1:nrow(grid1)) {
     cfg <- grid1[i, ]
     cat(sprintf("Grid1 %d/%d — BRT=%s BRTprec=%.2f Fraction=%.2f\n",
@@ -80,13 +85,13 @@ for (i in 1:nrow(grid1)) {
     )
     rec <- recalculateRules(selected_positions, ros$main, discrete=TRUE)
 
-    sig <- sum(rec$main$pValue < 0.05, na.rm = TRUE)
+    sig <- sum(rec$pValue < 0.05, na.rm = TRUE)
     results1 <- rbind(results1, data.frame(
         BRT          = cfg$BRT,
         BRTprec      = cfg$BRTprec,
         Fraction     = cfg$Fraction,
-        accuracyMean = rec$quality$accuracyMean,
-        nRules       = nrow(rec$main),
+        accuracyMean = ros$quality$accuracyMean,
+        nRules       = nrow(ros$main),
         nSigRules    = sig,
         stringsAsFactors = FALSE
     ))
@@ -167,12 +172,12 @@ for (i in 1:nrow(grid2)) {
     )
     rec <- recalculateRules(selected_positions, ros$main, discrete=TRUE)
 
-    sig <- sum(rec$main$pValue < 0.05, na.rm = TRUE)
+    sig <- sum(rec$pValue < 0.05, na.rm = TRUE)
     results2 <- rbind(results2, data.frame(
         classifier            = cfg$classifier,
         reducerDiscernibility = cfg$reducerDiscernibility,
-        accuracyMean          = rec$quality$accuracyMean,
-        nRules                = nrow(rec$main),
+        accuracyMean          = ros$quality$accuracyMean,
+        nRules                = nrow(ros$main),
         nSigRules             = sig,
         stringsAsFactors = FALSE
     ))
@@ -207,147 +212,78 @@ best2_discern    <- best2$reducerDiscernibility
 # Cell 8: Build Grid 3
 
 ```{r}
-# ruleFiltration=FALSE: 1 config
-# ruleFiltration=TRUE: ruleFiltrSupport × ruleFiltrAccuracy × ruleFiltrCoverage = 5×5×5 = 125
-# Total: 126
-
-# Each filter param is c(low, high). Values to try:
-# Support:  c(0,0), c(1,3) [default], c(1,5), c(2,5), c(1,10)
-# Accuracy: c(0,0), c(0,0.5) [default], c(0,0.7), c(0,0.85), c(0.5,1)
-# Coverage: c(0,0), c(0,0) [default=same as off], c(0,0.05), c(0,0.1), c(0,0.2)
-
 support_vals <- list(c(0,0), c(1,3), c(1,5), c(2,5), c(1,10))
 accuracy_vals <- list(c(0,0), c(0,0.5), c(0,0.7), c(0,0.85), c(0.5,1))
 coverage_vals <- list(c(0,0), c(0,0.05), c(0,0.1), c(0,0.2), c(0,0.5))
 
-# Build grid as index combinations
-grid3_true <- expand.grid(
+# No filtration: 1 config
+grid3_no_filt <- data.frame(
+    ruleFiltration = FALSE,
+    supp_idx = 1,
+    acc_idx = 1,
+    cov_idx = 1,
+    stringsAsFactors = FALSE
+)
+
+# With filtration: 5×5×5 = 125 configs
+grid3_with_filt <- expand.grid(
     supp_idx = 1:5,
     acc_idx  = 1:5,
     cov_idx  = 1:5,
     stringsAsFactors = FALSE
 )
+grid3_with_filt$ruleFiltration <- TRUE
 
-cat("Grid 3 configs: 1 (no filtration) +", nrow(grid3_true), "(with filtration) =", 1 + nrow(grid3_true), "\n")
+grid3 <- rbind(grid3_no_filt, grid3_with_filt)
+cat("Grid 3 configs:", nrow(grid3), "\n")
 ```
 
-# Cell 9: Run Grid 3 — No Filtration Baseline
+# Cell 9: Run Grid 3
 
 ```{r}
-run_with_best <- function(selected_positions, best_jp, best2, best1_discern, filt, filt_supp, filt_acc, filt_cov) {
-  if (best2$underSample) {
-    rosetta(selected_positions,
-            reducer = "Johnson",
-            JohnsonParam = best_jp,
-            reducerDiscernibility = best1_discern,
-            discrete = TRUE,
-            classifier = best2$classifier,
-            underSample = TRUE,
-            underSampleNum = best2$underSampleNum,
-            underSampleSize = 0,
-            ruleFiltration = filt,
-            ruleFiltrSupport = filt_supp,
-            ruleFiltrAccuracy = filt_acc,
-            ruleFiltrCoverage = filt_cov,
-            roc = FALSE)
-  } else {
-    rosetta(selected_positions,
-            reducer = "Johnson",
-            JohnsonParam = best_jp,
-            reducerDiscernibility = best1_discern,
-            discrete = TRUE,
-            classifier = best2$classifier,
-            underSample = FALSE,
-            ruleFiltration = filt,
-            ruleFiltrSupport = filt_supp,
-            ruleFiltrAccuracy = filt_acc,
-            ruleFiltrCoverage = filt_cov,
-            roc = FALSE)
-  }
-}
-
 results3 <- data.frame(
-  ruleFiltration   = logical(),
-  filtrSupport     = character(),
-  filtrAccuracy    = character(),
-  filtrCoverage    = character(),
-  accuracyMean     = numeric(),
-  nRules           = integer(),
-  nSigRules        = integer(),
-  stringsAsFactors = FALSE
+    ruleFiltration   = logical(),
+    filtrSupport     = character(),
+    filtrAccuracy    = character(),
+    filtrCoverage    = character(),
+    accuracyMean     = numeric(),
+    nRules           = integer(),
+    nSigRules        = integer(),
+    stringsAsFactors = FALSE
 )
 
-cat("Grid3 1/126 — ruleFiltration=FALSE\n")
-ros <- tryCatch(
-  run_with_best(selected_positions, best_jp, best2, best1_discern,
-                filt = FALSE,
-                filt_supp = c(0, 0),
-                filt_acc  = c(0, 0),
-                filt_cov  = c(0, 0)),
-  error = function(e) { cat("  ERROR:", e$message, "\n"); NULL }
-)
-
-if (!is.null(ros)) {
-  rec <- recalculateRules(selected_positions, ros$main, discrete=TRUE)
-  sig <- sum(rec$pValue < 0.05, na.rm = TRUE)
-  results3 <- rbind(results3, data.frame(
-    ruleFiltration = FALSE,
-    filtrSupport   = "c(0,0)",
-    filtrAccuracy  = "c(0,0)",
-    filtrCoverage  = "c(0,0)",
-    accuracyMean   = ros$quality$accuracyMean,
-    nRules         = nrow(ros$main),
-    nSigRules      = sig,
-    stringsAsFactors = FALSE
-  ))
-} else {
-  results3 <- rbind(results3, data.frame(
-    ruleFiltration = FALSE,
-    filtrSupport   = "c(0,0)",
-    filtrAccuracy  = "c(0,0)",
-    filtrCoverage  = "c(0,0)",
-    accuracyMean   = NA_real_,
-    nRules         = NA_integer_,
-    nSigRules      = NA_integer_,
-    stringsAsFactors = FALSE
-  ))
-}
-
-cat("Baseline done.\n")
-```
-
-# Cell 10: Run Grid 3 — With Filtration (125 configs)
-
-```{r}
-for (i in 1:nrow(grid3_true)) {
-    si <- grid3_true$supp_idx[i]
-    ai <- grid3_true$acc_idx[i]
-    ci <- grid3_true$cov_idx[i]
-
-    s_val <- support_vals[[si]]
-    a_val <- accuracy_vals[[ai]]
-    c_val <- coverage_vals[[ci]]
-
-    cat(sprintf("Grid3 %d/126 — Supp=c(%s) Acc=c(%s) Cov=c(%s)\n",
-                i + 1,
+for (i in 1:nrow(grid3)) {
+    cfg <- grid3[i, ]
+    
+    s_val <- support_vals[[cfg$supp_idx]]
+    a_val <- accuracy_vals[[cfg$acc_idx]]
+    c_val <- coverage_vals[[cfg$cov_idx]]
+    
+    cat(sprintf("Grid3 %d/%d — Filt=%s Supp=c(%s) Acc=c(%s) Cov=c(%s)\n",
+                i, nrow(grid3),
+                cfg$ruleFiltration,
                 paste(s_val, collapse=","),
                 paste(a_val, collapse=","),
                 paste(c_val, collapse=",")))
-
+    
     ros <- tryCatch(
-        run_with_best(selected_positions, best_jp, best2, best1_discern,
-                    filt = TRUE,
-                    filt_supp = s_val,
-                    filt_acc  = a_val,
-                    filt_cov  = c_val),
+        rosetta(selected_positions,
+                reducer = "Johnson",
+                JohnsonParam = best_jp,
+                reducerDiscernibility = best2_discern,
+                discrete = TRUE,
+                classifier = best2_classifier,
+                ruleFiltration = cfg$ruleFiltration,
+                ruleFiltrSupport = s_val,
+                ruleFiltrAccuracy = a_val,
+                ruleFiltrCoverage = c_val,
+                roc = FALSE),
         error = function(e) { cat("  ERROR:", e$message, "\n"); NULL }
     )
-
-    if (!is.null(ros)) {
-        rec <- recalculateRules(selected_positions, ros$main, discrete=TRUE)
-        sig <- sum(rec$pValue < 0.05, na.rm = TRUE)
-        results3 <- rbind(results3, data.frame(
-        ruleFiltration = TRUE,
+    rec <- recalculateRules(selected_positions, ros$main, discrete=TRUE)
+    sig <- sum(rec$pValue < 0.05, na.rm = TRUE)
+    results3 <- rbind(results3, data.frame(
+        ruleFiltration = cfg$ruleFiltration,
         filtrSupport   = paste0("c(", paste(s_val, collapse=","), ")"),
         filtrAccuracy  = paste0("c(", paste(a_val, collapse=","), ")"),
         filtrCoverage  = paste0("c(", paste(c_val, collapse=","), ")"),
@@ -355,25 +291,13 @@ for (i in 1:nrow(grid3_true)) {
         nRules         = nrow(ros$main),
         nSigRules      = sig,
         stringsAsFactors = FALSE
-        ))
-    } else {
-        results3 <- rbind(results3, data.frame(
-        ruleFiltration = TRUE,
-        filtrSupport   = paste0("c(", paste(s_val, collapse=","), ")"),
-        filtrAccuracy  = paste0("c(", paste(a_val, collapse=","), ")"),
-        filtrCoverage  = paste0("c(", paste(c_val, collapse=","), ")"),
-        accuracyMean   = NA_real_,
-        nRules         = NA_integer_,
-        nSigRules      = NA_integer_,
-        stringsAsFactors = FALSE
-        ))
-    }
+    ))
 }
 
 cat("\nGrid 3 complete.\n")
 ```
 
-# Cell 11: Grid 3 Results
+# Cell 10: Grid 3 Results
 
 ```{r}
 results3 <- results3[order(-results3$accuracyMean, na.last = TRUE), ]
@@ -389,13 +313,18 @@ cat("  filtrSupport:", best3$filtrSupport, "\n")
 cat("  filtrAccuracy:", best3$filtrAccuracy, "\n")
 cat("  filtrCoverage:", best3$filtrCoverage, "\n")
 cat("  Accuracy:", best3$accuracyMean, " Rules:", best3$nRules, "(", best3$nSigRules, "sig)\n")
+
+best_filt       <- best3$ruleFiltration
+best_filt_supp  <- eval(parse(text = best3$filtrSupport))
+best_filt_acc   <- eval(parse(text = best3$filtrAccuracy))
+best_filt_cov   <- eval(parse(text = best3$filtrCoverage))
 ```
 
 # ============================================================
 # FINAL SUMMARY
 # ============================================================
 
-# Cell 12: Print Best Overall Configuration
+# Cell 11: Print Best Overall Configuration
 
 ```{r}
 cat("====================================================\n")
@@ -408,13 +337,11 @@ cat("  BRT:                 ", best1$BRT, "\n")
 cat("  BRTprec:             ", best1$BRTprec, "\n")
 cat("  Precompute:           FALSE\n")
 cat("  Approximate:          TRUE\n")
-cat("  Fraction:            ", best1$Fraction, "\n")
-cat("  reducerDiscernibility:", best1_discern, "\n\n")
+cat("  Fraction:            ", best1$Fraction, "\n\n")
 
 cat("--- Discretization, Classifier & Sampling (Grid 2) ---\n")
 cat("  classifier:          ", best2$classifier, "\n")
-cat("  underSample:         ", best2$underSample, "\n")
-if (best2$underSample) cat("  underSampleNum:      ", best2$underSampleNum, "\n")
+cat("  reducerDiscernibility:", best2_discern, "\n")
 cat("\n")
 
 cat("--- Rule Filtration (Grid 3) ---\n")
@@ -439,10 +366,8 @@ best_filt_cov   <- eval(parse(text = best3$filtrCoverage))
 
 best_config <- list(
     jp                    = best_jp,
-    reducerDiscernibility = best1_discern,
-    classifier            = best2$classifier,
-    underSample           = best2$underSample,
-    underSampleNum        = best2$underSampleNum,
+    reducerDiscernibility = best2_discern,
+    classifier            = best2_classifier,
     ruleFiltration        = best_filt,
     ruleFiltrSupport      = best_filt_supp,
     ruleFiltrAccuracy     = best_filt_acc,
@@ -457,15 +382,14 @@ best_config <- list(
 --- Johnson Reducer Params (Grid 1) ---
   Modulo:               TRUE
   BRT:                  TRUE 
-  BRTprec:              0.6 
+  BRTprec:              0.9 
   Precompute:           FALSE
   Approximate:          TRUE
   Fraction:             0.99 
-  reducerDiscernibility: Object 
 
 --- Discretization, Classifier & Sampling (Grid 2) ---
   classifier:           StandardVoter 
-  underSample:          FALSE 
+  reducerDiscernibility: Object 
 
 --- Rule Filtration (Grid 3) ---
   ruleFiltration:       FALSE 
@@ -475,7 +399,7 @@ best_config <- list(
   Grid 2 best accuracy: 0.962092 
   Grid 3 best accuracy: 0.962092 
 
-# Cell 13: Genetic
+# Cell 12: Genetic
 ```{r}
 cat("=== Johnson vs Genetic on best config ===\n\n")
 
@@ -486,9 +410,6 @@ ros_johnson <- rosetta(selected_positions,
     reducerDiscernibility = best_config$reducerDiscernibility,
     discrete = TRUE,
     classifier = best_config$classifier,
-    underSample = best_config$underSample,
-    underSampleNum = best_config$underSampleNum,
-    underSampleSize = 0,
     ruleFiltration = best_config$ruleFiltration,
     ruleFiltrSupport = best_config$ruleFiltrSupport,
     ruleFiltrAccuracy = best_config$ruleFiltrAccuracy,
@@ -513,9 +434,6 @@ ros_genetic_simple <- rosetta(selected_positions,
     reducerDiscernibility = best_config$reducerDiscernibility,
     discrete = TRUE,
     classifier = best_config$classifier,
-    underSample = best_config$underSample,
-    underSampleNum = best_config$underSampleNum,
-    underSampleSize = 0,
     ruleFiltration = best_config$ruleFiltration,
     ruleFiltrSupport = best_config$ruleFiltrSupport,
     ruleFiltrAccuracy = best_config$ruleFiltrAccuracy,
