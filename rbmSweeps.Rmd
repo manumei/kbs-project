@@ -212,29 +212,17 @@ for (i in 1:nrow(grid2)) {
     error = function(e) { cat("  ERROR:", e$message, "\n"); NULL }
     )
 
-    if (!is.null(ros)) {
-        rec <- recalculateRules(selected_positions, ros$main, discrete=TRUE)
-        sig <- sum(rec$pValue < 0.05, na.rm = TRUE)
-        results2 <- rbind(results2, data.frame(
-        classifier     = cfg$classifier,
-        underSample    = cfg$underSample,
-        underSampleNum = cfg$underSampleNum,
-        accuracyMean   = ros$quality$accuracyMean,
-        nRules         = nrow(ros$main),
-        nSigRules      = sig,
-        stringsAsFactors = FALSE
-        ))
-    } else {
-        results2 <- rbind(results2, data.frame(
-        classifier     = cfg$classifier,
-        underSample    = cfg$underSample,
-        underSampleNum = cfg$underSampleNum,
-        accuracyMean   = NA_real_,
-        nRules         = NA_integer_,
-        nSigRules      = NA_integer_,
-        stringsAsFactors = FALSE
-        ))
-    }
+    rec <- recalculateRules(selected_positions, ros$main, discrete=TRUE)
+    sig <- sum(rec$pValue < 0.05, na.rm = TRUE)
+    results2 <- rbind(results2, data.frame(
+    classifier     = cfg$classifier,
+    underSample    = cfg$underSample,
+    underSampleNum = cfg$underSampleNum,
+    accuracyMean   = ros$quality$accuracyMean,
+    nRules         = nrow(ros$main),
+    nSigRules      = sig,
+    stringsAsFactors = FALSE
+    ))
 }
 
 cat("\nGrid 2 complete.\n")
