@@ -14,6 +14,8 @@ Identify the set of relevant features that would be used for classification
 library(rJava)
 library(rmcfs)
 
+set.seed(435)
+
 # Load data
 df <- read.csv("data/clean/positions.csv")
 
