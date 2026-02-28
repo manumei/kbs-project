@@ -24,21 +24,18 @@ cat("Classes:", paste(names(table(selected_positions$class)), table(selected_pos
 ```{r}
 fraction_vals <- c(0.99, 0.95, 0.9, 0.8, 0.7, 0.5, 0.25, 0.1)
 brtprec_vals  <- c(1, 0.9, 0.8, 0.6, 0.5, 0.25, 0.1)
-discern_vals  <- c("Full", "Object")
 
 grid1_brt_false <- expand.grid(
-    BRT                   = FALSE,
-    BRTprec               = 0,
-    Fraction              = fraction_vals,
-    reducerDiscernibility = discern_vals,
+    BRT     = FALSE,
+    BRTprec = 0,
+    Fraction = fraction_vals,
     stringsAsFactors = FALSE
 )
 
 grid1_brt_true <- expand.grid(
-    BRT                   = TRUE,
-    BRTprec               = brtprec_vals,
-    Fraction              = fraction_vals,
-    reducerDiscernibility = discern_vals,
+    BRT     = TRUE,
+    BRTprec = brtprec_vals,
+    Fraction = fraction_vals,
     stringsAsFactors = FALSE
 )
 
@@ -50,20 +47,19 @@ cat("Grid 1 configs:", nrow(grid1), "\n")
 
 ```{r}
 results1 <- data.frame(
-    BRT                   = logical(),
-    BRTprec               = numeric(),
-    Fraction              = numeric(),
-    reducerDiscernibility = character(),
-    accuracyMean          = numeric(),
-    nRules                = integer(),
-    nSigRules             = integer(),
+    BRT          = logical(),
+    BRTprec      = numeric(),
+    Fraction     = numeric(),
+    accuracyMean = numeric(),
+    nRules       = integer(),
+    nSigRules    = integer(),
     stringsAsFactors = FALSE
 )
 
 for (i in 1:nrow(grid1)) {
     cfg <- grid1[i, ]
-    cat(sprintf("Grid1 %d/%d — BRT=%s BRTprec=%.2f Fraction=%.2f Discern=%s\n",
-                i, nrow(grid1), cfg$BRT, cfg$BRTprec, cfg$Fraction, cfg$reducerDiscernibility))
+    cat(sprintf("Grid1 %d/%d — BRT=%s BRTprec=%.2f Fraction=%.2f\n",
+                i, nrow(grid1), cfg$BRT, cfg$BRTprec, cfg$Fraction))
 
     jp <- list(
         Modulo      = TRUE,
@@ -78,37 +74,30 @@ for (i in 1:nrow(grid1)) {
         rosetta(selected_positions,
                 reducer = "Johnson",
                 JohnsonParam = jp,
-                reducerDiscernibility = cfg$reducerDiscernibility,
                 roc = FALSE,
-                discrete=TRUE),
+                discrete = TRUE),
         error = function(e) { cat("  ERROR:", e$message, "\n"); NULL }
     )
 
-    if (!is.null(ros)) {
-        rec <- recalculateRules(selected_positions, ros$main, discrete=TRUE)
-        sig <- sum(rec$pValue < 0.05, na.rm = TRUE)
-        results1 <- rbind(results1, data.frame(
-        BRT                   = cfg$BRT,
-        BRTprec               = cfg$BRTprec,
-        Fraction              = cfg$Fraction,
-        reducerDiscernibility = cfg$reducerDiscernibility,
-        accuracyMean          = ros$quality$accuracyMean,
-        nRules                = nrow(ros$main),
-        nSigRules             = sig,
+    sig <- sum(ros$main$pValue < 0.05, na.rm = TRUE)
+    results1 <- rbind(results1, data.frame(
+        BRT          = cfg$BRT,
+        BRTprec      = cfg$BRTprec,
+        Fraction     = cfg$Fraction,
+        accuracyMean = ros$quality$accuracyMean,
+        nRules       = nrow(ros$main),
+        nSigRules    = sig,
         stringsAsFactors = FALSE
-        ))
-    } else {
-        results1 <- rbind(results1, data.frame(
-        BRT                   = cfg$BRT,
-        BRTprec               = cfg$BRTprec,
-        Fraction              = cfg$Fraction,
-        reducerDiscernibility = cfg$reducerDiscernibility,
-        accuracyMean          = NA_real_,
-        nRules                = NA_integer_,
-        nSigRules             = NA_integer_,
+    ))
+    results1 <- rbind(results1, data.frame(
+        BRT          = cfg$BRT,
+        BRTprec      = cfg$BRTprec,
+        Fraction     = cfg$Fraction,
+        accuracyMean = NA_real_,
+        nRules       = NA_integer_,
+        nSigRules    = NA_integer_,
         stringsAsFactors = FALSE
-        ))
-    }
+    ))
 }
 
 cat("\nGrid 1 complete.\n")
@@ -128,7 +117,6 @@ cat("\nBest Grid 1 config:\n")
 cat("  BRT:", best1$BRT, " BRTprec:", best1$BRTprec, " Fraction:", best1$Fraction, "\n")
 cat("  Accuracy:", best1$accuracyMean, " Rules:", best1$nRules, "(", best1$nSigRules, "sig)\n")
 
-# Store best JohnsonParam for Grid 2
 best_jp <- list(
     Modulo      = TRUE,
     BRT         = best1$BRT,
@@ -137,7 +125,6 @@ best_jp <- list(
     Approximate = TRUE,
     Fraction    = best1$Fraction
 )
-best1_discern <- best1$reducerDiscernibility
 ```
 
 # ============================================================
@@ -147,24 +134,15 @@ best1_discern <- best1$reducerDiscernibility
 # Cell 5: Build Grid 2
 
 ```{r}
-classifier_vals     <- c("StandardVoter", "ObjectTrackingVoter", "NaiveBayesClassifier")
-underSampleNum_vals <- c(0, 100, 250)
+classifier_vals <- c("StandardVoter", "ObjectTrackingVoter", "NaiveBayesClassifier")
+discern_vals    <- c("Full", "Object")
 
-grid2_no_us <- expand.grid(
-    classifier     = classifier_vals,
-    underSample    = FALSE,
-    underSampleNum = 0,
+grid2 <- expand.grid(
+    classifier            = classifier_vals,
+    reducerDiscernibility = discern_vals,
     stringsAsFactors = FALSE
 )
 
-grid2_us <- expand.grid(
-    classifier     = classifier_vals,
-    underSample    = TRUE,
-    underSampleNum = underSampleNum_vals,
-    stringsAsFactors = FALSE
-)
-
-grid2 <- rbind(grid2_no_us, grid2_us)
 cat("Grid 2 configs:", nrow(grid2), "\n")
 ```
 
@@ -172,56 +150,38 @@ cat("Grid 2 configs:", nrow(grid2), "\n")
 
 ```{r}
 results2 <- data.frame(
-    classifier     = character(),
-    underSample    = logical(),
-    underSampleNum = integer(),
-    accuracyMean   = numeric(),
-    nRules         = integer(),
-    nSigRules      = integer(),
+    classifier            = character(),
+    reducerDiscernibility = character(),
+    accuracyMean          = numeric(),
+    nRules                = integer(),
+    nSigRules             = integer(),
     stringsAsFactors = FALSE
 )
 
 for (i in 1:nrow(grid2)) {
     cfg <- grid2[i, ]
-    cat(sprintf("Grid2 %d/%d — cls=%s US=%s USnum=%d\n",
-                i, nrow(grid2), cfg$classifier, cfg$underSample, cfg$underSampleNum))
+    cat(sprintf("Grid2 %d/%d — cls=%s discern=%s\n",
+                i, nrow(grid2), cfg$classifier, cfg$reducerDiscernibility))
 
-    ros <- tryCatch({
-        if (cfg$underSample) {
-        rosetta(selected_positions,
+    ros <- tryCatch(
+        suppressWarnings(rosetta(selected_positions,
                 reducer = "Johnson",
                 JohnsonParam = best_jp,
-                reducerDiscernibility = best1_discern,
+                reducerDiscernibility = cfg$reducerDiscernibility,
                 discrete = TRUE,
                 classifier = cfg$classifier,
-                underSample = TRUE,
-                underSampleNum = cfg$underSampleNum,
-                underSampleSize = 0,
-                roc = FALSE,)
-        } else {
-        rosetta(selected_positions,
-                reducer = "Johnson",
-                JohnsonParam = best_jp,
-                reducerDiscernibility = best1_discern,
-                discrete = TRUE,
-                classifier = cfg$classifier,
-                underSample = FALSE,
-                roc = FALSE)
-        }
-    },
-    error = function(e) { cat("  ERROR:", e$message, "\n"); NULL }
+                roc = FALSE)),
+        error = function(e) { cat("  ERROR:", e$message, "\n"); NULL }
     )
 
-    rec <- recalculateRules(selected_positions, ros$main, discrete=TRUE)
-    sig <- sum(rec$pValue < 0.05, na.rm = TRUE)
+    sig <- sum(ros$main$pValue < 0.05, na.rm = TRUE)
     results2 <- rbind(results2, data.frame(
-    classifier     = cfg$classifier,
-    underSample    = cfg$underSample,
-    underSampleNum = cfg$underSampleNum,
-    accuracyMean   = ros$quality$accuracyMean,
-    nRules         = nrow(ros$main),
-    nSigRules      = sig,
-    stringsAsFactors = FALSE
+        classifier            = cfg$classifier,
+        reducerDiscernibility = cfg$reducerDiscernibility,
+        accuracyMean          = ros$quality$accuracyMean,
+        nRules                = nrow(ros$main),
+        nSigRules             = sig,
+        stringsAsFactors = FALSE
     ))
 }
 
@@ -239,14 +199,12 @@ print(results2[1:min(15, nrow(results2)), ], row.names = FALSE)
 
 best2 <- results2[1, ]
 cat("\nBest Grid 2 config:\n")
+cat("  classifier:", best2$classifier, "\n")
 cat("  reducerDiscernibility:", best2$reducerDiscernibility, "\n")
-cat("  underSample:", best2$underSample, " underSampleNum:", best2$underSampleNum, "\n")
 cat("  Accuracy:", best2$accuracyMean, " Rules:", best2$nRules, "(", best2$nSigRules, "sig)\n")
 
-# Store best params for Grid 3
-best2_classifier            <- best2$classifier
-best2_underSample           <- best2$underSample
-best2_underSampleNum        <- best2$underSampleNum
+best2_classifier <- best2$classifier
+best2_discern    <- best2$reducerDiscernibility
 ```
 
 # ============================================================
