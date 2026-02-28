@@ -78,24 +78,16 @@ for (i in 1:nrow(grid1)) {
                 discrete = TRUE),
         error = function(e) { cat("  ERROR:", e$message, "\n"); NULL }
     )
+    rec <- recalculateRules(selected_positions, ros$main, discrete=TRUE)
 
-    sig <- sum(ros$main$pValue < 0.05, na.rm = TRUE)
+    sig <- sum(rec$main$pValue < 0.05, na.rm = TRUE)
     results1 <- rbind(results1, data.frame(
         BRT          = cfg$BRT,
         BRTprec      = cfg$BRTprec,
         Fraction     = cfg$Fraction,
-        accuracyMean = ros$quality$accuracyMean,
-        nRules       = nrow(ros$main),
+        accuracyMean = rec$quality$accuracyMean,
+        nRules       = nrow(rec$main),
         nSigRules    = sig,
-        stringsAsFactors = FALSE
-    ))
-    results1 <- rbind(results1, data.frame(
-        BRT          = cfg$BRT,
-        BRTprec      = cfg$BRTprec,
-        Fraction     = cfg$Fraction,
-        accuracyMean = NA_real_,
-        nRules       = NA_integer_,
-        nSigRules    = NA_integer_,
         stringsAsFactors = FALSE
     ))
 }
@@ -173,13 +165,14 @@ for (i in 1:nrow(grid2)) {
                 roc = FALSE)),
         error = function(e) { cat("  ERROR:", e$message, "\n"); NULL }
     )
+    rec <- recalculateRules(selected_positions, ros$main, discrete=TRUE)
 
-    sig <- sum(ros$main$pValue < 0.05, na.rm = TRUE)
+    sig <- sum(rec$main$pValue < 0.05, na.rm = TRUE)
     results2 <- rbind(results2, data.frame(
         classifier            = cfg$classifier,
         reducerDiscernibility = cfg$reducerDiscernibility,
-        accuracyMean          = ros$quality$accuracyMean,
-        nRules                = nrow(ros$main),
+        accuracyMean          = rec$quality$accuracyMean,
+        nRules                = nrow(rec$main),
         nSigRules             = sig,
         stringsAsFactors = FALSE
     ))
