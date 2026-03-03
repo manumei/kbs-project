@@ -123,25 +123,31 @@ run_ros <- function(dat, jp, cl) {
 
 # Helper: run one MCFS config (output suppressed), return factor-encoded selected data
 run_mcfs_select <- function(dat, cfg) {
-  invisible(capture.output(suppressMessages(suppressWarnings({
-    if (cfg == 1) {
-      res <- mcfs(class ~ ., dat, projections = params_1_projections, projectionSize = params_1_projectionSize, threadsNumber = threadsNum)
-    } else if (cfg == 2) {
-      res <- mcfs(class ~ ., dat, projections = params_2_projections, projectionSize = params_2_projectionSize, threadsNumber = threadsNum)
-    } else if (cfg == 3) {
-      res <- mcfs(class ~ ., dat, featureFreq = params_3_featureFreq, projectionSize = params_3_projectionSize, threadsNumber = threadsNum)
-    } else if (cfg == 4) {
-      res <- mcfs(class ~ ., dat, featureFreq = params_4_featureFreq, projectionSize = params_4_projectionSize, threadsNumber = threadsNum)
-    } else if (cfg == 5) {
-      res <- mcfs(class ~ ., dat, projections = params_5_projections, projectionSize = params_5_projectionSize, cutoffMethod = params_5_cutoffMethod, threadsNumber = threadsNum)
-    } else if (cfg == 6) {
-      res <- mcfs(class ~ ., dat, projections = params_6_projections, projectionSize = params_6_projectionSize, cutoffMethod = params_6_cutoffMethod, threadsNumber = threadsNum)
-    } else if (cfg == 7) {
-      res <- mcfs(class ~ ., dat, projections = params_7_projections, projectionSize = params_7_projectionSize, cutoffMethod = params_7_cutoffMethod, threadsNumber = threadsNum)
-    } else {
-      res <- mcfs(class ~ ., dat, projections = params_8_projections, projectionSize = params_8_projectionSize, cutoffMethod = params_8_cutoffMethod, threadsNumber = threadsNum)
-    }
-  })))
+  # Suppress Java-level stdout (mcfs prints via Java, bypassing R's sink)
+  old_out <- .jfield("java/lang/System", "Ljava/io/PrintStream;", "out")
+  null_stream <- .jnew("java/io/PrintStream",
+    .jcast(.jnew("java/io/ByteArrayOutputStream"), "java/io/OutputStream"))
+  .jcall("java/lang/System", "V", "setOut", null_stream)
+  on.exit(.jcall("java/lang/System", "V", "setOut", old_out), add = TRUE)
+
+  if (cfg == 1) {
+    res <- suppressMessages(suppressWarnings(mcfs(class ~ ., dat, projections = params_1_projections, projectionSize = params_1_projectionSize, threadsNumber = threadsNum)))
+  } else if (cfg == 2) {
+    res <- suppressMessages(suppressWarnings(mcfs(class ~ ., dat, projections = params_2_projections, projectionSize = params_2_projectionSize, threadsNumber = threadsNum)))
+  } else if (cfg == 3) {
+    res <- suppressMessages(suppressWarnings(mcfs(class ~ ., dat, featureFreq = params_3_featureFreq, projectionSize = params_3_projectionSize, threadsNumber = threadsNum)))
+  } else if (cfg == 4) {
+    res <- suppressMessages(suppressWarnings(mcfs(class ~ ., dat, featureFreq = params_4_featureFreq, projectionSize = params_4_projectionSize, threadsNumber = threadsNum)))
+  } else if (cfg == 5) {
+    res <- suppressMessages(suppressWarnings(mcfs(class ~ ., dat, projections = params_5_projections, projectionSize = params_5_projectionSize, cutoffMethod = params_5_cutoffMethod, threadsNumber = threadsNum)))
+  } else if (cfg == 6) {
+    res <- suppressMessages(suppressWarnings(mcfs(class ~ ., dat, projections = params_6_projections, projectionSize = params_6_projectionSize, cutoffMethod = params_6_cutoffMethod, threadsNumber = threadsNum)))
+  } else if (cfg == 7) {
+    res <- suppressMessages(suppressWarnings(mcfs(class ~ ., dat, projections = params_7_projections, projectionSize = params_7_projectionSize, cutoffMethod = params_7_cutoffMethod, threadsNumber = threadsNum)))
+  } else {
+    res <- suppressMessages(suppressWarnings(mcfs(class ~ ., dat, projections = params_8_projections, projectionSize = params_8_projectionSize, cutoffMethod = params_8_cutoffMethod, threadsNumber = threadsNum)))
+  }
+
   sel  <- res$RI[1:res$cutoff_value, ]
   out  <- as.data.frame(dat[, colnames(dat) %in% c(sel$attribute, "class")])
   out[] <- lapply(out, as.factor)
