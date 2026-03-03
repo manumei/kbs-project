@@ -19,40 +19,49 @@ library(R.ROSETTA)
 set.seed(9054)
 
 # Load data
-df <- read.csv("data/clean/train_data.csv")
-df_test <- read.csv("data/clean/test_data.csv")
+df <- read.csv("data/clean/train_data.csv",
+               colClasses = "character",
+               stringsAsFactors = FALSE)
+
+df_test <- read.csv("data/clean/test_data.csv",
+                    colClasses = "character",
+                    stringsAsFactors = FALSE)
 
 # Drop column ID
-positions <- subset(df, select = -id )
-positions_test <- subset(df_test, select = -id )
+data_train <- subset(df, select = -id )
+data_test <- subset(df_test, select = -id )
+
+# Inspect basic structures of train and test
+#str(data_train)
+#str(data_test)
 ```
 
 # MCFS
 ```{r}
 # Perform monte carlo feature selection (random reducts)
-result <- mcfs(class ~ ., positions, projections = 1500, projectionSize = 0.1, splits = 5, splitSetSize = 500, cutoffPermutations = 20, threadsNumber = 8)
+rank_feats <- mcfs(class ~ ., data_train, projections = 1500, projectionSize = 0.1, splits = 5, splitSetSize = 500, cutoffPermutations = 20, threadsNumber = 8)
 
 # Fetch results
-result2 <- result$RI[1:result$cutoff_value,]
+train_feats <- rank_feats$RI[1:rank_feats$cutoff_value,]
 
 # Keep only relevant features
-selected_positions <- positions[, colnames(positions) %in% c(result2$attribute, "class"), drop = FALSE]
-selected_positions_test <- positions_test[, colnames(positions_test) %in% c(result2$attribute, "class"), drop = FALSE]
+sel_data_train <- data_train[, colnames(data_train) %in% c(train_feats$attribute, "class"), drop = FALSE]
+sel_data_test <- data_test[, colnames(data_test) %in% c(train_feats$attribute, "class"), drop = FALSE]
 
 # convert from char to factor
-selected_positions <- as.data.frame(selected_positions)
-selected_positions[] <- lapply(selected_positions, as.factor)
+sel_data_train <- as.data.frame(sel_data_train)
+sel_data_train[] <- lapply(sel_data_train, as.factor)
 
-selected_positions_test <- as.data.frame(selected_positions_test)
-selected_positions_test[] <- lapply(selected_positions_test, as.factor)
+sel_data_test <- as.data.frame(sel_data_test)
+sel_data_test[] <- lapply(sel_data_test, as.factor)
 
-dim(selected_positions)
-table(selected_positions$class)
+dim(sel_data_train)
+dim(sel_data_test)
 ```
 
 # Rosetta Cross Val
 ```{r}
-ros <- rosetta(selected_positions,
+ros <- rosetta(sel_data_train,
               reducer = "Johnson",
               JohnsonParam = list(Modulo = TRUE, BRT = TRUE, BRTprec = 0.7, Precompute = FALSE, Approximate = TRUE, Fraction = 1),
               reducerDiscernibility = "Object",
@@ -63,7 +72,7 @@ ros <- rosetta(selected_positions,
 rules <- ros$main
 quality <- ros$quality
 
-rec <- recalculateRules(selected_positions, rules, discrete=TRUE)
+rec <- recalculateRules(sel_data_train, rules, discrete=TRUE)
 rec <- rec[rec$pValue <= 0.05, ]
 
 cat("Johnson - Number of rules:", nrow(rules), "\n")
@@ -83,9 +92,10 @@ plotMeanROC(ros)
 
 # Rosetta Test Run
 ```{r}
-truth <- selected_positions_test[, "class"]
-test_features <- subset(selected_positions_test, select = -class)
+truth <- sel_data_test[, "class"]
+test_features <- subset(sel_data_test, select = -class)
 
+# use rec from train to infer on test
 pred <- predictClass(test_features, rec, discrete = TRUE, validate = TRUE, defClass = truth)
 
 library(caret)
@@ -131,7 +141,7 @@ print(viewRules(rules_1[top_1, ]))
 #Hierarchical clustering of model rules
 #subsetting the significant rules from the recalculated rules
 sig_rec_rules <- rec[rec$pValue < 0.05,]
-clusterRules(selected_positions,sig_rec_rules,fontsize = 5)
+clusterRules(sel_data_train,sig_rec_rules,fontsize = 5)
 ```
 
 # Visunet
