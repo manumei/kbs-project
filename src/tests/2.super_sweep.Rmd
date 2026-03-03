@@ -36,8 +36,8 @@ params_4_featureFreq <- 150
 params_4_projectionSize <- 0.2
 
 # ---- 5 ----
-params_5_projections <- 1000
-params_5_projectionSize <- 0.35
+params_5_projections <- 1500
+params_5_projectionSize <- 0.1
 
 # ---- 6 ----
 params_6_projections <- 1000

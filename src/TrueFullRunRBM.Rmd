@@ -42,7 +42,7 @@ dim(data_test)
 # MCFS
 ```{r}
 # Perform monte carlo feature selection (random reducts)
-rank_feats <- mcfs(class ~ ., data_train, projections = 1250, projectionSize = 0.2, cutoffPermutations = 40, threadsNumber = 8, cutoffMethod = "mean")
+rank_feats <- mcfs(class ~ ., data_train, projections = 1500, projectionSize = 0.1, cutoffPermutations = 20, threadsNumber = 8)
 
 # Fetch results
 train_feats <- rank_feats$RI[1:rank_feats$cutoff_value,]
@@ -64,6 +64,7 @@ dim(sel_data_test)
 
 # Rosetta Cross Val
 ```{r}
+set.seed(1)
 ros <- rosetta(sel_data_train,
               reducer = "Johnson",
               JohnsonParam = list(Modulo = TRUE, BRT = TRUE, BRTprec = 0.6, Precompute = FALSE, Approximate = TRUE, Fraction = 1),
@@ -85,12 +86,37 @@ print(quality)
 rlsHuman <- viewRules(rules[rules$decision=="Human",])
 print(rlsHuman[1:3,])
 
-sig_rules <- rules[rules$pValue < 0.05, ]
-cat("Significant rules (p < 0.05):", nrow(sig_rules), "/", nrow(rules), "\n\n")
-tabS <- table(sig_rules$decision)
+cat("Significant rules (p < 0.05):", nrow(rec), "/", nrow(rules), "\n\n")
+tabS <- table(rec$decision)
 print(tabS)
 
 plotMeanROC(ros)
+```
+
+# Genetic Reducer Attempt
+```{r}
+ros_gen <- rosetta(sel_data_train,
+              reducer = "Genetic",
+              GeneticParam = list(Modulo = TRUE, BRT = TRUE, BRTprec = 0.6, Precompute = FALSE, Approximate = TRUE, Fraction = 1, Algorithm="Simple"),
+              reducerDiscernibility = "Object",
+              classifier = "StandardVoter",
+              underSample = FALSE,
+              roc = TRUE, discrete=TRUE, clroc = "Human")
+
+rules_gen <- ros_gen$main
+quality_gen <- ros_gen$quality
+
+rec_gen <- recalculateRules(sel_data_train, rules_gen, discrete=TRUE)
+rec_gen <- rec_gen[rec_gen$pValue <= 0.05, ]
+
+cat("Johnson - Number of rules:", nrow(rules_gen), "\n")
+print(quality_gen)
+
+# print top 3 rules for human
+rlsHuman_gen <- viewRules(rules_gen[rules_gen$decision=="Human",])
+print(rlsHuman_gen[1:3,])
+
+plotMeanROC(ros_gen)
 ```
 
 # Rosetta Test Run

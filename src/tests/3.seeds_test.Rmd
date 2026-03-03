@@ -44,24 +44,17 @@ fixed_roc <- FALSE
 
 
 # MCFS
-rank_feats1 <- mcfs(class ~ ., data_train, projections = 1250, projectionSize = 0.2, cutoffPermutations = 40, threadsNumber = 16)
-rank_feats2 <- mcfs(class ~ ., data_train, projections = 1250, projectionSize = 0.2, cutoffPermutations = 40, threadsNumber = 16, cutoffMethod = "mean")
+rank_feats <- mcfs(class ~ ., data_train, projections = 1250, projectionSize = 0.2, cutoffPermutations = 20, threadsNumber = 16)
 
 # Fetch results
-train_feats1 <- rank_feats1$RI[1:rank_feats1$cutoff_value,]
-train_feats2 <- rank_feats2$RI[1:rank_feats2$cutoff_value,]
+train_feats <- rank_feats$RI[1:rank_feats$cutoff_value,]
 
 # Keep only relevant features
-sel_data_train1 <- data_train[, colnames(data_train) %in% c(train_feats1$attribute, "class"), drop = FALSE]
-sel_data_train1 <- as.data.frame(sel_data_train1)
-sel_data_train1[] <- lapply(sel_data_train1, as.factor)
+sel_data_train <- data_train[, colnames(data_train) %in% c(train_feats$attribute, "class"), drop = FALSE]
+sel_data_train <- as.data.frame(sel_data_train)
+sel_data_train[] <- lapply(sel_data_train, as.factor)
 
-sel_data_train2 <- data_train[, colnames(data_train) %in% c(train_feats2$attribute, "class"), drop = FALSE]
-sel_data_train2 <- as.data.frame(sel_data_train2)
-sel_data_train2[] <- lapply(sel_data_train2, as.factor)
-
-dim(sel_data_train1)
-dim(sel_data_train2)
+dim(sel_data_train)
 ```
 
 # Cell 3: Implement Here
@@ -69,7 +62,6 @@ dim(sel_data_train2)
 results <- data.frame(
   seed        = integer(),
   ros_config  = character(),
-  dataset     = character(),
   accuracy    = numeric(),
   stringsAsFactors = FALSE
 )
@@ -81,30 +73,25 @@ for (seed in 1:2500) {
     cat("Processing seed:", seed, "\n")
   }
 
-  for (ds in c("ds1", "ds2")) {
-    dat <- if (ds == "ds1") sel_data_train1 else sel_data_train2
+  for (cfg in c("jp1", "jp2")) {
+    jp <- if (cfg == "jp1") johnson_param1 else johnson_param2
 
-    for (cfg in c("jp1", "jp2")) {
-      jp <- if (cfg == "jp1") johnson_param1 else johnson_param2
+    ros <- rosetta(sel_data_train,
+      reducer               = fixed_reducer,
+      JohnsonParam          = jp,
+      reducerDiscernibility = fixed_reducerDiscernibility,
+      discrete              = TRUE,
+      classifier            = fixed_classifier1,
+      underSample           = fixed_underSample,
+      roc                   = fixed_roc
+    )
 
-      ros <- rosetta(dat,
-        reducer               = fixed_reducer,
-        JohnsonParam          = jp,
-        reducerDiscernibility = fixed_reducerDiscernibility,
-        discrete              = TRUE,
-        classifier            = fixed_classifier1,
-        underSample           = fixed_underSample,
-        roc                   = fixed_roc
-      )
-
-      results <- rbind(results, data.frame(
-        seed       = seed,
-        ros_config = cfg,
-        dataset    = ds,
-        accuracy   = ros$quality$accuracyMean,
-        stringsAsFactors = FALSE
-      ))
-    }
+    results <- rbind(results, data.frame(
+      seed       = seed,
+      ros_config = cfg,
+      accuracy   = ros$quality$accuracyMean,
+      stringsAsFactors = FALSE
+    ))
   }
 }
 ```
@@ -112,10 +99,10 @@ for (seed in 1:2500) {
 # Cell 4: Implement Rank
 ```{r}
 combo_rank <- do.call(rbind, lapply(
-  split(results, list(results$ros_config, results$dataset)),
+  split(results, results$ros_config),
   function(grp) {
     data.frame(
-      combo    = paste0(grp$ros_config[1], "_", grp$dataset[1]),
+      combo    = grp$ros_config[1],
       avg_acc  = round(mean(grp$accuracy, na.rm = TRUE), 4),
       stringsAsFactors = FALSE
     )
