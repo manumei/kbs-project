@@ -23,11 +23,11 @@ params_2_projections        <- 1250
 params_2_projectionSize     <- 0.2
 
 # ---- 3 ----
-params_3_projections        <- featureFreq = 100
+params_3_featureFreq        <- 100
 params_3_projectionSize     <- 0.2
 
 # ---- 4 ----
-params_4_projections        <- featureFreq = 150
+params_4_featureFreq        <- 150
 params_4_projectionSize     <- 0.2
 
 # ---- 5 ----
@@ -129,9 +129,9 @@ run_mcfs_select <- function(dat, cfg) {
     } else if (cfg == 2) {
       res <- mcfs(class ~ ., dat, projections = params_2_projections, projectionSize = params_2_projectionSize, threadsNumber = threadsNum)
     } else if (cfg == 3) {
-      res <- mcfs(class ~ ., dat, featureFreq = 100, projectionSize = params_3_projectionSize, threadsNumber = threadsNum)
+      res <- mcfs(class ~ ., dat, featureFreq = params_3_featureFreq, projectionSize = params_3_projectionSize, threadsNumber = threadsNum)
     } else if (cfg == 4) {
-      res <- mcfs(class ~ ., dat, featureFreq = 150, projectionSize = params_4_projectionSize, threadsNumber = threadsNum)
+      res <- mcfs(class ~ ., dat, featureFreq = params_4_featureFreq, projectionSize = params_4_projectionSize, threadsNumber = threadsNum)
     } else if (cfg == 5) {
       res <- mcfs(class ~ ., dat, projections = params_5_projections, projectionSize = params_5_projectionSize, cutoffMethod = params_5_cutoffMethod, threadsNumber = threadsNum)
     } else if (cfg == 6) {
