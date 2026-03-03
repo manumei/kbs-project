@@ -9,49 +9,50 @@ library(caret)
 
 # Load data
 df <- read.csv("data/clean/train_data.csv",
-               colClasses = "character",
-               stringsAsFactors = FALSE)
+  colClasses = "character",
+  stringsAsFactors = FALSE
+)
 
 # Drop column ID
-positions <- subset(df, select = -id )
+positions <- subset(df, select = -id)
 ```
 
 # Cell 2: MCFS Params
 ```{r}
 # ---- 1 ----
-params_1_projections        <- 1000
-params_1_projectionSize     <- 0.2
+params_1_projections <- 1000
+params_1_projectionSize <- 0.2
 
 # ---- 2 ----
-params_2_projections        <- 1250
-params_2_projectionSize     <- 0.2
+params_2_projections <- 1250
+params_2_projectionSize <- 0.2
 
 # ---- 3 ----
-params_3_featureFreq        <- 100
-params_3_projectionSize     <- 0.2
+params_3_featureFreq <- 100
+params_3_projectionSize <- 0.2
 
 # ---- 4 ----
-params_4_featureFreq        <- 150
-params_4_projectionSize     <- 0.2
+params_4_featureFreq <- 150
+params_4_projectionSize <- 0.2
 
 # ---- 5 ----
-params_5_projections        <- 1000
-params_5_projectionSize     <- 0.35
+params_5_projections <- 1000
+params_5_projectionSize <- 0.35
 
 # ---- 6 ----
-params_6_projections    <- 1000
+params_6_projections <- 1000
 params_6_projectionSize <- 0.2
-params_6_cutoffMethod   <- "criticalAngle"
+params_6_cutoffMethod <- "criticalAngle"
 
 # ---- 7 ----
-params_7_projections    <- 1000
+params_7_projections <- 1000
 params_7_projectionSize <- 0.2
-params_7_cutoffMethod   <- "kmeans"
+params_7_cutoffMethod <- "kmeans"
 
 # ---- 8 ----
-params_8_projections    <- 1000
+params_8_projections <- 1000
 params_8_projectionSize <- 0.2
-params_8_cutoffMethod   <- "mean"
+params_8_cutoffMethod <- "mean"
 
 # Anchor parameters for every mcfs model
 threadsNum <- 16
@@ -62,39 +63,39 @@ threadsNum <- 16
 ```{r}
 # Johnson params to try
 johnson_param1 <- list(
-    Modulo = TRUE,
-    BRT = TRUE,
-    BRTprec = 0.7,
-    Precompute = FALSE,
-    Approximate = TRUE,
-    Fraction = 1
+  Modulo = TRUE,
+  BRT = TRUE,
+  BRTprec = 0.7,
+  Precompute = FALSE,
+  Approximate = TRUE,
+  Fraction = 1
 )
 
 johnson_param2 <- list(
-    Modulo = TRUE,
-    BRT = TRUE,
-    BRTprec = 0.6,
-    Precompute = FALSE,
-    Approximate = TRUE,
-    Fraction = 1
+  Modulo = TRUE,
+  BRT = TRUE,
+  BRTprec = 0.6,
+  Precompute = FALSE,
+  Approximate = TRUE,
+  Fraction = 1
 )
 
 johnson_param3 <- list(
-    Modulo = TRUE,
-    BRT = TRUE,
-    BRTprec = 0.5,
-    Precompute = FALSE,
-    Approximate = TRUE,
-    Fraction = 1
+  Modulo = TRUE,
+  BRT = TRUE,
+  BRTprec = 0.5,
+  Precompute = FALSE,
+  Approximate = TRUE,
+  Fraction = 1
 )
 
 johnson_param4 <- list(
-    Modulo = TRUE,
-    BRT = TRUE,
-    BRTprec = 0.4,
-    Precompute = FALSE,
-    Approximate = TRUE,
-    Fraction = 1
+  Modulo = TRUE,
+  BRT = TRUE,
+  BRTprec = 0.4,
+  Precompute = FALSE,
+  Approximate = TRUE,
+  Fraction = 1
 )
 
 # Classifiers
@@ -128,8 +129,10 @@ run_ros <- function(dat, jp, cl) {
 run_mcfs_select <- function(dat, cfg) {
   # Suppress Java-level stdout (mcfs prints via Java, bypassing R's sink)
   old_out <- .jfield("java/lang/System", "Ljava/io/PrintStream;", "out")
-  null_stream <- .jnew("java/io/PrintStream",
-    .jcast(.jnew("java/io/ByteArrayOutputStream"), "java/io/OutputStream"))
+  null_stream <- .jnew(
+    "java/io/PrintStream",
+    .jcast(.jnew("java/io/ByteArrayOutputStream"), "java/io/OutputStream")
+  )
   .jcall("java/lang/System", "V", "setOut", null_stream)
   on.exit(.jcall("java/lang/System", "V", "setOut", old_out), add = TRUE)
 
@@ -151,18 +154,18 @@ run_mcfs_select <- function(dat, cfg) {
     res <- suppressMessages(suppressWarnings(mcfs(class ~ ., dat, projections = params_8_projections, projectionSize = params_8_projectionSize, cutoffMethod = params_8_cutoffMethod, threadsNumber = threadsNum)))
   }
 
-  sel  <- res$RI[1:res$cutoff_value, ]
-  out  <- as.data.frame(dat[, colnames(dat) %in% c(sel$attribute, "class")])
+  sel <- res$RI[1:res$cutoff_value, ]
+  out <- as.data.frame(dat[, colnames(dat) %in% c(sel$attribute, "class")])
   out[] <- lapply(out, as.factor)
   return(out)
 }
 
 # Grid search storage
 results <- data.frame(
-  seed           = integer(),
-  mcfs_config    = character(),
+  seed = integer(),
+  mcfs_config = character(),
   rosetta_config = character(),
-  accuracy       = numeric(),
+  accuracy = numeric(),
   stringsAsFactors = FALSE
 )
 
@@ -171,29 +174,33 @@ for (seed in 1:25) {
   cat(sprintf("Seed %d/25\n", seed))
 
   for (mcfs_i in 1:8) {
-    sel_data   <- run_mcfs_select(positions, mcfs_i)
+    sel_data <- run_mcfs_select(positions, mcfs_i)
     mcfs_label <- paste0("mcfs", mcfs_i)
 
-    acc_jp1_sv  <- run_ros(sel_data, johnson_param1, classifier1)
+    acc_jp1_sv <- run_ros(sel_data, johnson_param1, classifier1)
     acc_jp1_otv <- run_ros(sel_data, johnson_param1, classifier2)
-    acc_jp2_sv  <- run_ros(sel_data, johnson_param2, classifier1)
+    acc_jp2_sv <- run_ros(sel_data, johnson_param2, classifier1)
     acc_jp2_otv <- run_ros(sel_data, johnson_param2, classifier2)
-    acc_jp3_sv  <- run_ros(sel_data, johnson_param3, classifier1)
+    acc_jp3_sv <- run_ros(sel_data, johnson_param3, classifier1)
     acc_jp3_otv <- run_ros(sel_data, johnson_param3, classifier2)
-    acc_jp4_sv  <- run_ros(sel_data, johnson_param4, classifier1)
+    acc_jp4_sv <- run_ros(sel_data, johnson_param4, classifier1)
     acc_jp4_otv <- run_ros(sel_data, johnson_param4, classifier2)
 
-    acc_vec    <- c(acc_jp1_sv, acc_jp1_otv, acc_jp2_sv, acc_jp2_otv,
-                    acc_jp3_sv, acc_jp3_otv, acc_jp4_sv, acc_jp4_otv)
-    ros_labels <- c("jp1_sv", "jp1_otv", "jp2_sv", "jp2_otv",
-                    "jp3_sv", "jp3_otv", "jp4_sv", "jp4_otv")
+    acc_vec <- c(
+      acc_jp1_sv, acc_jp1_otv, acc_jp2_sv, acc_jp2_otv,
+      acc_jp3_sv, acc_jp3_otv, acc_jp4_sv, acc_jp4_otv
+    )
+    ros_labels <- c(
+      "jp1_sv", "jp1_otv", "jp2_sv", "jp2_otv",
+      "jp3_sv", "jp3_otv", "jp4_sv", "jp4_otv"
+    )
 
     for (k in seq_along(acc_vec)) {
       results <- rbind(results, data.frame(
-        seed           = seed,
-        mcfs_config    = mcfs_label,
+        seed = seed,
+        mcfs_config = mcfs_label,
         rosetta_config = ros_labels[k],
-        accuracy       = acc_vec[k],
+        accuracy = acc_vec[k],
         stringsAsFactors = FALSE
       ))
     }
@@ -209,9 +216,9 @@ combo_summary <- do.call(rbind, lapply(
   function(grp) {
     best_idx <- which.max(grp$accuracy)
     data.frame(
-      combo         = paste0(grp$mcfs_config[1], "_", grp$rosetta_config[1]),
-      avg_acc       = round(mean(grp$accuracy, na.rm = TRUE), 4),
-      best_seed     = grp$seed[best_idx],
+      combo = paste0(grp$mcfs_config[1], "_", grp$rosetta_config[1]),
+      avg_acc = round(mean(grp$accuracy, na.rm = TRUE), 4),
+      best_seed = grp$seed[best_idx],
       best_seed_acc = round(grp$accuracy[best_idx], 4),
       stringsAsFactors = FALSE
     )

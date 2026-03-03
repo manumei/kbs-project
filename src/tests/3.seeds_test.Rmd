@@ -76,6 +76,10 @@ results <- data.frame(
 
 for (seed in 1:2500) {
   set.seed(seed)
+  
+  if (seed %% 150 == 0 || seed == 1) {
+    cat("Processing seed:", seed, "\n")
+  }
 
   for (ds in c("ds1", "ds2")) {
     dat <- if (ds == "ds1") sel_data_train1 else sel_data_train2
