@@ -19,7 +19,7 @@ cat("Classes:", paste(names(table(selected_positions$class)), table(selected_pos
 best_johnson_param <- list(
     Modulo = TRUE,
     BRT = TRUE,
-    BRTprec = 0.6,
+    BRTprec = 0.9,
     Precompute = FALSE,
     Approximate = TRUE,
     Fraction = 0.99
@@ -57,18 +57,8 @@ for (cls in levels(selected_positions$class)) {
   pct <- tabS[cls] / sum(rules_final$decision == cls) * 100
     cat("% significant for class", cls, ":", round(pct, 1), "%\n")
 }
+rec_rules <- recalculateRules(selected_positions, rules_final, discrete=TRUE)
 ```
-
-# Top rules_final by Class
-```{r}
-# Top rules_final for each decision class
-#for (cls in levels(selected_positions$)) {
-    #cat("\n--- Top rules_final for class:", cls, "---\n")
-    #cls_rules <- rules_final[rules_final$decision == cls, ]
-    #print(viewRules(cls_rules[1:min(10, nrow(cls_rules)), ]))
-#}
-```
-
 # ROC
 ```{r}
 plotMeanROC(ros_final)
@@ -89,11 +79,6 @@ uniquepositions_human <- setdiff(positionsHuman, positionsAvian)
 uniquepositions_avian <- setdiff(positionsAvian, positionsHuman)
 uniquepositions_human
 uniquepositions_avian
-```
-
-# recalculate
-```{r}
-rec_rules <- recalculateRules(selected_positions, rules_final, discrete=TRUE)
 ```
 
 # Top Rule by class
@@ -138,7 +123,9 @@ VisuArc
 library(csVisuNet)
 library(arcdiagram)
 
-visuArc(vis, decision="Human")
+#visuArc(vis, decision="Human")
 
-```
-
+netH <- vis$Human
+edges <- netH$edges[,1:2]
+M <- as.matrix(edges)
+arcdiagram::arcplot(M)

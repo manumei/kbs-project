@@ -1,0 +1,216 @@
+# Cell 1: Load
+```{r}
+library(rJava)
+library(rmcfs)
+library(R.ROSETTA)
+library(caret)
+
+# Load data
+df <- read.csv("data/clean/train_data.csv")
+
+# Drop column ID
+positions <- subset(df, select = -id )
+```
+
+# Cell 2: MCFS Params
+```{r}
+# ---- 1 ----
+params_1_projections        <- 1000
+params_1_projectionSize     <- 0.2
+
+# ---- 2 ----
+params_2_projections        <- 1250
+params_2_projectionSize     <- 0.2
+
+# ---- 3 ----
+params_3_projections        <- featureFreq = 100
+params_3_projectionSize     <- 0.2
+
+# ---- 4 ----
+params_4_projections        <- featureFreq = 150
+params_4_projectionSize     <- 0.2
+
+# ---- 5 ----
+params_5_projections    <- 1000
+params_5_projectionSize <- 0.2
+params_5_cutoffMethod   <- "criticalAngle"
+
+# ---- 6 ----
+params_6_projections    <- 1000
+params_6_projectionSize <- 0.2
+params_6_cutoffMethod   <- "kmeans"
+
+# ---- 7 ----
+params_7_projections    <- 1000
+params_7_projectionSize <- 0.2
+params_7_cutoffMethod   <- "contrast"
+
+# ---- 8 ----
+params_8_projections    <- 1000
+params_8_projectionSize <- 0.2
+params_8_cutoffMethod   <- "mean"
+
+# Anchor parameters for every mcfs model
+threadsNum <- 8
+# the rest of the parameters dont pass, leave as default
+```
+
+# Cell 3: Rosetta Params
+```{r}
+# Johnson params to try
+johnson_param1 <- list(
+    Modulo = TRUE,
+    BRT = TRUE,
+    BRTprec = 0.7,
+    Precompute = FALSE,
+    Approximate = TRUE,
+    Fraction = 1
+)
+
+johnson_param2 <- list(
+    Modulo = TRUE,
+    BRT = TRUE,
+    BRTprec = 0.6,
+    Precompute = FALSE,
+    Approximate = TRUE,
+    Fraction = 1
+)
+
+johnson_param3 <- list(
+    Modulo = TRUE,
+    BRT = TRUE,
+    BRTprec = 0.5,
+    Precompute = FALSE,
+    Approximate = TRUE,
+    Fraction = 1
+)
+
+johnson_param4 <- list(
+    Modulo = TRUE,
+    BRT = TRUE,
+    BRTprec = 0.4,
+    Precompute = FALSE,
+    Approximate = TRUE,
+    Fraction = 1
+)
+
+# Classifiers
+classifier1 <- "StandardVoter"
+classifier2 <- "ObjectTrackingVoter"
+
+# Anchor parameters for every rosetta model
+fixed_underSample <- FALSE
+fixed_reducerDiscernibility <- "Object"
+fixed_reducer <- "Johnson"
+fixed_roc <- FALSE
+```
+
+# Cell 4: Implement Here
+```{r}
+# Helper: run one rosetta model, return accuracyMean
+run_ros <- function(dat, jp, cl) {
+  ros <- rosetta(dat,
+    reducer               = fixed_reducer,
+    JohnsonParam          = jp,
+    reducerDiscernibility = fixed_reducerDiscernibility,
+    discrete              = TRUE,
+    classifier            = cl,
+    underSample           = fixed_underSample,
+    roc                   = fixed_roc
+  )
+  return(ros$quality$accuracyMean)
+}
+
+# Helper: run one MCFS config (output suppressed), return factor-encoded selected data
+run_mcfs_select <- function(dat, cfg) {
+  invisible(capture.output(suppressMessages(suppressWarnings({
+    if (cfg == 1) {
+      res <- mcfs(class ~ ., dat, projections = params_1_projections, projectionSize = params_1_projectionSize, threadsNumber = threadsNum)
+    } else if (cfg == 2) {
+      res <- mcfs(class ~ ., dat, projections = params_2_projections, projectionSize = params_2_projectionSize, threadsNumber = threadsNum)
+    } else if (cfg == 3) {
+      res <- mcfs(class ~ ., dat, featureFreq = 100, projectionSize = params_3_projectionSize, threadsNumber = threadsNum)
+    } else if (cfg == 4) {
+      res <- mcfs(class ~ ., dat, featureFreq = 150, projectionSize = params_4_projectionSize, threadsNumber = threadsNum)
+    } else if (cfg == 5) {
+      res <- mcfs(class ~ ., dat, projections = params_5_projections, projectionSize = params_5_projectionSize, cutoffMethod = params_5_cutoffMethod, threadsNumber = threadsNum)
+    } else if (cfg == 6) {
+      res <- mcfs(class ~ ., dat, projections = params_6_projections, projectionSize = params_6_projectionSize, cutoffMethod = params_6_cutoffMethod, threadsNumber = threadsNum)
+    } else if (cfg == 7) {
+      res <- mcfs(class ~ ., dat, projections = params_7_projections, projectionSize = params_7_projectionSize, cutoffMethod = params_7_cutoffMethod, threadsNumber = threadsNum)
+    } else {
+      res <- mcfs(class ~ ., dat, projections = params_8_projections, projectionSize = params_8_projectionSize, cutoffMethod = params_8_cutoffMethod, threadsNumber = threadsNum)
+    }
+  })))
+  sel  <- res$RI[1:res$cutoff_value, ]
+  out  <- as.data.frame(dat[, colnames(dat) %in% c(sel$attribute, "class")])
+  out[] <- lapply(out, as.factor)
+  return(out)
+}
+
+# Grid search storage
+results <- data.frame(
+  seed           = integer(),
+  mcfs_config    = character(),
+  rosetta_config = character(),
+  accuracy       = numeric(),
+  stringsAsFactors = FALSE
+)
+
+for (seed in 1:25) {
+  set.seed(seed)
+  cat(sprintf("Seed %d/25\n", seed))
+
+  for (mcfs_i in 1:8) {
+    sel_data   <- run_mcfs_select(positions, mcfs_i)
+    mcfs_label <- paste0("mcfs", mcfs_i)
+
+    acc_jp1_sv  <- run_ros(sel_data, johnson_param1, classifier1)
+    acc_jp1_otv <- run_ros(sel_data, johnson_param1, classifier2)
+    acc_jp2_sv  <- run_ros(sel_data, johnson_param2, classifier1)
+    acc_jp2_otv <- run_ros(sel_data, johnson_param2, classifier2)
+    acc_jp3_sv  <- run_ros(sel_data, johnson_param3, classifier1)
+    acc_jp3_otv <- run_ros(sel_data, johnson_param3, classifier2)
+    acc_jp4_sv  <- run_ros(sel_data, johnson_param4, classifier1)
+    acc_jp4_otv <- run_ros(sel_data, johnson_param4, classifier2)
+
+    acc_vec    <- c(acc_jp1_sv, acc_jp1_otv, acc_jp2_sv, acc_jp2_otv,
+                    acc_jp3_sv, acc_jp3_otv, acc_jp4_sv, acc_jp4_otv)
+    ros_labels <- c("jp1_sv", "jp1_otv", "jp2_sv", "jp2_otv",
+                    "jp3_sv", "jp3_otv", "jp4_sv", "jp4_otv")
+
+    for (k in seq_along(acc_vec)) {
+      results <- rbind(results, data.frame(
+        seed           = seed,
+        mcfs_config    = mcfs_label,
+        rosetta_config = ros_labels[k],
+        accuracy       = acc_vec[k],
+        stringsAsFactors = FALSE
+      ))
+    }
+  }
+}
+```
+
+# Cell 5: Results Summary
+```{r}
+# Summary table: 64 combos x (avg_acc, best_seed, best_seed_acc)
+combo_summary <- do.call(rbind, lapply(
+  split(results, list(results$mcfs_config, results$rosetta_config)),
+  function(grp) {
+    best_idx <- which.max(grp$accuracy)
+    data.frame(
+      combo         = paste0(grp$mcfs_config[1], "_", grp$rosetta_config[1]),
+      avg_acc       = round(mean(grp$accuracy, na.rm = TRUE), 4),
+      best_seed     = grp$seed[best_idx],
+      best_seed_acc = round(grp$accuracy[best_idx], 4),
+      stringsAsFactors = FALSE
+    )
+  }
+))
+
+combo_summary <- combo_summary[order(-combo_summary$avg_acc), ]
+rownames(combo_summary) <- NULL
+print(combo_summary)
+```
+

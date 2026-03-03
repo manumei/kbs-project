@@ -1,0 +1,149 @@
+---
+title: "Project2"
+output: html_document
+---
+
+# Monte Carlo Feature Selection
+
+Identify the set of relevant features that would be used for classification
+
+# Load
+```{r}
+
+#install.packages("rJava")
+#install.packages("rmcfs")
+library(rJava)
+library(rmcfs)
+library(R.ROSETTA)
+
+set.seed(9054)
+
+# Load data
+df <- read.csv("data/clean/train_data.csv")
+df_test <- read.csv("data/clean/test_data.csv")
+
+# Drop column ID
+positions <- subset(df, select = -id )
+positions_test <- subset(df_test, select = -id )
+```
+
+# MCFS
+```{r}
+# Perform monte carlo feature selection (random reducts)
+result <- mcfs(class ~ ., positions, projections = 1500, projectionSize = 0.1, splits = 5, splitSetSize = 500, cutoffPermutations = 20, threadsNumber = 8)
+
+# Fetch results
+result2 <- result$RI[1:result$cutoff_value,]
+
+# Keep only relevant features
+selected_positions <- positions[, colnames(positions) %in% c(result2$attribute, "class"), drop = FALSE]
+selected_positions_test <- positions_test[, colnames(positions_test) %in% c(result2$attribute, "class"), drop = FALSE]
+
+# convert from char to factor
+selected_positions <- as.data.frame(selected_positions)
+selected_positions[] <- lapply(selected_positions, as.factor)
+
+selected_positions_test <- as.data.frame(selected_positions_test)
+selected_positions_test[] <- lapply(selected_positions_test, as.factor)
+
+dim(selected_positions)
+table(selected_positions$class)
+```
+
+# Rosetta Cross Val
+```{r}
+ros <- rosetta(selected_positions,
+              reducer = "Johnson",
+              JohnsonParam = list(Modulo = TRUE, BRT = TRUE, BRTprec = 0.7, Precompute = FALSE, Approximate = TRUE, Fraction = 1),
+              reducerDiscernibility = "Object",
+              classifier = "StandardVoter",
+              underSample = FALSE,
+              roc = TRUE, discrete=TRUE, clroc = "Human")
+
+rules <- ros$main
+quality <- ros$quality
+
+rec <- recalculateRules(selected_positions, rules, discrete=TRUE)
+rec <- rec[rec$pValue <= 0.05, ]
+
+cat("Johnson - Number of rules:", nrow(rules), "\n")
+print(quality)
+
+# print top 3 rules for human
+rlsHuman <- viewRules(rules[rules$decision=="Human",])
+print(rlsHuman[1:3,])
+
+sig_rules <- rules[rules$pValue < 0.05, ]
+cat("Significant rules (p < 0.05):", nrow(sig_rules), "/", nrow(rules), "\n\n")
+tabS <- table(sig_rules$decision)
+print(tabS)
+
+plotMeanROC(ros)
+```
+
+# Rosetta Test Run
+```{r}
+truth <- selected_positions_test[, "class"]
+test_features <- subset(selected_positions_test, select = -class)
+
+pred <- predictClass(test_features, rec, discrete = TRUE, validate = TRUE, defClass = truth)
+
+library(caret)
+RBM_pred <- factor(pred$out$predictedClass, levels = levels(truth))
+cm <- confusionMatrix(RBM_pred, truth)
+print(cm)
+```
+
+# Important Features
+```{r}
+gf <- getFeatures(rec)
+print(gf$features)
+
+featsAvian  <- gf$features$Avian          # Features occurring in significant avian rules.
+featsHuman <- gf$features$Human         # Features occurring in significant human rules.
+
+commonfeats <- intersect(featsHuman, featsAvian)
+commonfeats
+
+uniquefeatsHuman <- setdiff(featsHuman, featsAvian)
+uniquefeatsAvian <- setdiff(featsAvian, featsHuman)
+uniquefeatsHuman
+uniquefeatsAvian
+```
+
+# Top Rules per Class
+```{r}
+# Top rule for class 0
+rules_0 <- rec[rec$decision == "Avian", ]
+top_0 <- which.min(rules_0$pValue)
+cat("Top rule for class 0 - p =", rules_0$pValue[top_0], "\n")
+print(viewRules(rules_0[top_0, ]))
+
+# Top rule for class 1
+rules_1 <- rec[rec$decision == "Human", ]
+top_1 <- which.min(rules_1$pValue)
+cat("\nTop rule for class 1 - p =", rules_1$pValue[top_1], "\n")
+print(viewRules(rules_1[top_1, ]))
+```
+
+# Clustering Model Rules
+```{r}
+#Hierarchical clustering of model rules
+#subsetting the significant rules from the recalculated rules
+sig_rec_rules <- rec[rec$pValue < 0.05,]
+clusterRules(selected_positions,sig_rec_rules,fontsize = 5)
+```
+
+# Visunet
+```{r}
+library(RCy3)
+library(csVisuNet)
+cytoscapePing ()
+vis <- visunetcyto(ros$main)
+```
+
+# VisuArc
+```{r}
+... replace with proper VisuArc cell
+```
+

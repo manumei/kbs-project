@@ -1,0 +1,112 @@
+---
+title: "3.idk - RBM Test"
+output: html_document
+---
+
+# Cell 1: Setup and Data
+
+```{r}
+set.seed(9054)
+library(R.ROSETTA)
+library(caret)
+
+og_positions <- read.csv("data/clean/positions.csv")
+cat("Data:", nrow(og_positions), "rows x", ncol(og_positions), "cols\n")
+cat("Classes:", paste(names(table(og_positions$class)), table(og_positions$class), sep="=", collapse=", "), "\n")
+
+train_idx <- createDataPartition(og_positions$class,
+                                  p = 0.8,
+                                  list = FALSE)
+
+train_data <- og_positions[train_idx, ]
+test_data  <- og_positions[-train_idx, ]
+
+cat("Train data:", nrow(train_data), "rows x", ncol(train_data), "cols\n")
+cat("Test data:", nrow(test_data), "rows x", ncol(test_data), "cols\n")
+
+# Verify class distribution in train and test sets
+cat("Classes in Train:", paste(names(table(train_data$class)), table(train_data$class), sep="=", collapse=", "), "\n")
+cat("Classes in Test:", paste(names(table(test_data$class)), table(test_data$class), sep="=", collapse=", "), "\n")
+
+# Write CSVs with the split data
+write.csv(train_data, "data/clean/train_data.csv", row.names = FALSE)
+write.csv(test_data, "data/clean/test_data.csv", row.names = FALSE)
+```
+
+```{r}
+best_johnson_param <- list(
+    Modulo = TRUE,
+    BRT = TRUE,
+    BRTprec = 0.7,
+    Precompute = FALSE,
+    Approximate = TRUE,
+    Fraction = 1
+)
+
+cat("Final Model\n")
+ros_final <- rosetta(train_data,
+    reducer = "Johnson",
+    JohnsonParam = best_johnson_param,
+    reducerDiscernibility = "Object",
+    discrete = TRUE,
+    classifier = "StandardVoter",
+    underSample = FALSE,
+    roc = TRUE,
+    clroc = "Human")
+
+rules_final <- ros_final$main
+quality <- ros_final$quality
+
+rec_og <- recalculateRules(train_data, rules_final, discrete=TRUE)
+rec <- rec_og[rec_og$pValue <= 0.05, ]
+recmax <- rec_og[rec_og$pValue <= 0.01, ]
+
+cat("Johnson - Number of rules_final:", nrow(rules_final), "\n")
+print(quality)
+plotMeanROC(ros_final)
+```
+
+# Significant rules_final
+```{r}
+sig_rules <- rules_final[rules_final$pValue < 0.05, ]
+cat("Significant rules_final (p < 0.05):", nrow(sig_rules), "/", nrow(rules_final), "\n\n")
+tabS <- table(sig_rules$decision)
+print(tabS)
+for (cls in levels(train_data$class)) {
+  pct <- tabS[cls] / sum(rules_final$decision == cls) * 100
+    cat("% significant for class", cls, ":", round(pct, 1), "%\n")
+}
+rec_rules <- recalculateRules(train_data, rules_final, discrete=TRUE)
+```
+
+# Load test data and predict
+```{r}
+test_data$class <- as.factor(test_data$class)
+
+truth <- test_data[, "class"]
+test_features <- subset(test_data, select = -class)
+
+pred <- predictClass(test_features, rec, discrete = TRUE, validate = TRUE, defClass = truth)
+
+library(caret)
+RBM_pred <- factor(pred$out$predictedClass, levels = levels(truth))
+cm <- confusionMatrix(RBM_pred, truth)
+print(cm)
+```
+
+# Export test predictions CSV
+
+This cell is for building some comparison matrices and such from a python notebook.
+So by exporting a CSV with all the predictions, I can re-construct the metrics.
+
+```{r}
+# Reload the original test CSV with all columns intact
+test_full <- og_positions[-train_idx, ]
+
+# Add RBM predictions
+test_full$RBM_pred <- as.integer(pred$out$predictedClass)
+
+write.csv(test_full, "data/double_predicted_test.csv", row.names = FALSE)
+cat("Saved", nrow(test_full), "rows to data/double_predicted_test.csv\n")
+cat("Columns:", paste(names(test_full), collapse=", "), "\n")
+```
