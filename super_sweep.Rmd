@@ -6,7 +6,9 @@ library(R.ROSETTA)
 library(caret)
 
 # Load data
-df <- read.csv("data/clean/train_data.csv")
+df <- read.csv("data/clean/train_data.csv",
+               colClasses = "character",
+               stringsAsFactors = FALSE)
 
 # Drop column ID
 positions <- subset(df, select = -id )
@@ -31,19 +33,18 @@ params_4_featureFreq        <- 150
 params_4_projectionSize     <- 0.2
 
 # ---- 5 ----
-params_5_projections    <- 1000
-params_5_projectionSize <- 0.2
-params_5_cutoffMethod   <- "criticalAngle"
+params_5_projections        <- 1000
+params_5_projectionSize     <- 0.35
 
 # ---- 6 ----
 params_6_projections    <- 1000
 params_6_projectionSize <- 0.2
-params_6_cutoffMethod   <- "kmeans"
+params_6_cutoffMethod   <- "criticalAngle"
 
 # ---- 7 ----
 params_7_projections    <- 1000
 params_7_projectionSize <- 0.2
-params_7_cutoffMethod   <- "contrast"
+params_7_cutoffMethod   <- "kmeans"
 
 # ---- 8 ----
 params_8_projections    <- 1000
@@ -51,7 +52,7 @@ params_8_projectionSize <- 0.2
 params_8_cutoffMethod   <- "mean"
 
 # Anchor parameters for every mcfs model
-threadsNum <- 8
+threadsNum <- 16
 # the rest of the parameters dont pass, leave as default
 ```
 
@@ -139,7 +140,7 @@ run_mcfs_select <- function(dat, cfg) {
   } else if (cfg == 4) {
     res <- suppressMessages(suppressWarnings(mcfs(class ~ ., dat, featureFreq = params_4_featureFreq, projectionSize = params_4_projectionSize, threadsNumber = threadsNum)))
   } else if (cfg == 5) {
-    res <- suppressMessages(suppressWarnings(mcfs(class ~ ., dat, projections = params_5_projections, projectionSize = params_5_projectionSize, cutoffMethod = params_5_cutoffMethod, threadsNumber = threadsNum)))
+    res <- suppressMessages(suppressWarnings(mcfs(class ~ ., dat, projections = params_5_projections, projectionSize = params_5_projectionSize, threadsNumber = threadsNum)))
   } else if (cfg == 6) {
     res <- suppressMessages(suppressWarnings(mcfs(class ~ ., dat, projections = params_6_projections, projectionSize = params_6_projectionSize, cutoffMethod = params_6_cutoffMethod, threadsNumber = threadsNum)))
   } else if (cfg == 7) {
