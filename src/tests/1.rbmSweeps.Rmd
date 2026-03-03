@@ -9,15 +9,11 @@ output: html_document
 set.seed(9054)
 library(R.ROSETTA)
 
-selected_positions <- read.csv("data/clean/selected_positions.csv")
+selected_positions <- read.csv("data/clean/train_data.csv")
 
 cat("Data:", nrow(selected_positions), "rows x", ncol(selected_positions), "cols\n")
 cat("Classes:", paste(names(table(selected_positions$class)), table(selected_positions$class), sep="=", collapse=", "), "\n")
 ```
-
-# ============================================================
-# GRID SEARCH 1: Johnson BRT / BRTprec / Fraction (64 configs)
-# ============================================================
 
 # Cell 2: Build Super Grid
 
@@ -49,7 +45,7 @@ super_grid <- rbind(grid_brt_false, grid_brt_true)
 cat("Super grid configs:", nrow(super_grid), "\n")
 ```
 
-# Cell 3: Run Grid 1
+# Cell 3: Run Super Grid
 
 ```{r}
 # Cell 2: Run Super Grid
@@ -118,7 +114,7 @@ for (i in 1:nrow(super_grid)) {
 cat("\nSuper grid complete.\n")
 ```
 
-# Cell 4: Grid 1 Results
+# Cell 4: Super Grid Results
 
 ```{r}
 super_results <- super_results[order(-super_results$accuracyMean, na.last = TRUE), ]
@@ -164,12 +160,7 @@ best_classifier <- best$classifier
 best_discern    <- best$reducerDiscernibility
 ```
 
-# ============================================================
-# GRID SEARCH 3: Rule Filtration (126 configs)
-# ============================================================
-
-# Cell 8: Build Grid 3
-
+# Cell 5: Build Rule Filtration Grid
 ```{r}
 # Support intervals to REMOVE (low-support rules only)
 support_vals <- list(
@@ -259,7 +250,7 @@ grid3 <- rbind(grid3_no_filt, grid3_with_filt)
 cat("Grid 3 configs:", nrow(grid3), "\n")
 ```
 
-# Cell 9: Run Grid 3
+# Cell 6: Run Rule Filtration Grid
 
 ```{r}
 results3 <- data.frame(
@@ -338,7 +329,7 @@ for (i in 1:nrow(grid3)) {
 cat("\nGrid 3 complete.\n")
 ```
 
-# Cell 10: Grid 3 Results
+# Cell 7: Rule Filtration Grid Results
 
 ```{r}
 results3 <- results3[order(-results3$accuracyMean, na.last = TRUE), ]
@@ -360,7 +351,8 @@ best_filt_supp  <- eval(parse(text = best3$filtrSupport))
 best_filt_acc   <- eval(parse(text = best3$filtrAccuracy))
 best_filt_cov   <- eval(parse(text = best3$filtrCoverage))
 ```
-# Cell 11: Show best config
+
+# Cell 8: Best Config Summary
 ```{r}
 best_config <- list(
     jp = best_jp,
@@ -385,7 +377,7 @@ if (best_config$ruleFiltration) {
 }
 ```
 
-# Cell 12: Genetic
+# Cell 9: Johnson vs Genetic on Best Config
 ```{r}
 cat("=== Johnson vs Genetic on best config ===\n\n")
 
