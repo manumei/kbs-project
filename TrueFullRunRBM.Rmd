@@ -154,6 +154,11 @@ vis <- visunetcyto(ros$main)
 
 # VisuArc
 ```{r}
-... replace with proper VisuArc cell
+
+viss <- visunet(ros$main)
+
+visuArc(net= viss, decision='Human', feature='P722')
+
+
 ```
 
