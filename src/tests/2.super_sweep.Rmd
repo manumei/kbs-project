@@ -1,3 +1,5 @@
+# Super Sweep: MCFS + Rosetta search over seeds
+
 # Cell 1: Load
 ```{r}
 library(rJava)

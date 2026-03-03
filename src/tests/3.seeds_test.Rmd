@@ -5,12 +5,13 @@ library(rmcfs)
 library(R.ROSETTA)
 library(caret)
 
-df <- read.csv("data/clean/train_data.csv",
+df <- read.csv("../../data/clean/train_data.csv",
                colClasses = "character",
                stringsAsFactors = FALSE)
 
 # Drop column ID
 data_train <- subset(df, select = -id )
+dim(data_train)
 ```
 
 # Cell 2: Params
@@ -19,7 +20,7 @@ data_train <- subset(df, select = -id )
 johnson_param1 <- list(
     Modulo = TRUE,
     BRT = TRUE,
-    BRTprec = 0.7,
+    BRTprec = 0.6,
     Precompute = FALSE,
     Approximate = TRUE,
     Fraction = 1
@@ -28,7 +29,7 @@ johnson_param1 <- list(
 johnson_param2 <- list(
     Modulo = TRUE,
     BRT = TRUE,
-    BRTprec = 0.6,
+    BRTprec = 0.5,
     Precompute = FALSE,
     Approximate = TRUE,
     Fraction = 1
@@ -43,8 +44,8 @@ fixed_roc <- FALSE
 
 
 # MCFS
-rank_feats1 <- mcfs(class ~ ., data_train, projections = 1500, projectionSize = 0.1, splits = 5, splitSetSize = 500, cutoffPermutations = 20, threadsNumber = 8)
-rank_feats2 <- mcfs(class ~ ., data_train, projections = 1250, projectionSize = 0.2, splits = 5, splitSetSize = 500, cutoffPermutations = 20, threadsNumber = 8)
+rank_feats1 <- mcfs(class ~ ., data_train, projections = 1250, projectionSize = 0.2, cutoffPermutations = 40, threadsNumber = 16)
+rank_feats2 <- mcfs(class ~ ., data_train, projections = 1250, projectionSize = 0.2, cutoffPermutations = 40, threadsNumber = 16, cutoffMethod = "mean")
 
 # Fetch results
 train_feats1 <- rank_feats1$RI[1:rank_feats1$cutoff_value,]
