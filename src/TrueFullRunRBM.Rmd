@@ -19,11 +19,11 @@ library(R.ROSETTA)
 set.seed(9054)
 
 # Load data
-df <- read.csv("data/clean/train_data.csv",
+df <- read.csv("../data/clean/train_data.csv",
                colClasses = "character",
                stringsAsFactors = FALSE)
 
-df_test <- read.csv("data/clean/test_data.csv",
+df_test <- read.csv("../data/clean/test_data.csv",
                     colClasses = "character",
                     stringsAsFactors = FALSE)
 
@@ -34,6 +34,9 @@ data_test <- subset(df_test, select = -id )
 # Inspect basic structures of train and test
 #str(data_train)
 #str(data_test)
+
+dim(data_train)
+dim(data_test)
 ```
 
 # MCFS
