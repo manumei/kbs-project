@@ -9,7 +9,8 @@ output: html_document
 set.seed(9054)
 library(R.ROSETTA)
 
-selected_positions <- read.csv("data/clean/train_data.csv")
+selected_positions <- read.csv("../../data/clean/train_data.csv")
+selected_positions <- subset(selected_positions, select = -id)
 
 cat("Data:", nrow(selected_positions), "rows x", ncol(selected_positions), "cols\n")
 cat("Classes:", paste(names(table(selected_positions$class)), table(selected_positions$class), sep="=", collapse=", "), "\n")
@@ -65,7 +66,7 @@ super_results <- data.frame(
 
 for (i in 1:nrow(super_grid)) {
     cfg <- super_grid[i, ]
-    if (i %% 100 == 0 || i == 1 || i == nrow(super_grid)) {
+    if (i %% 50 == 0 || i == 1 || i == nrow(super_grid)) {
         cat(sprintf("SuperGrid %d/%d — BRT=%s BRTprec=%.2f Fraction=%.2f cls=%s discern=%s\n",
                     i, nrow(super_grid), cfg$BRT, cfg$BRTprec, cfg$Fraction,
                     cfg$classifier, cfg$reducerDiscernibility))

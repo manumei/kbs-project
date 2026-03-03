@@ -42,7 +42,7 @@ dim(data_test)
 # MCFS
 ```{r}
 # Perform monte carlo feature selection (random reducts)
-rank_feats <- mcfs(class ~ ., data_train, projections = 1500, projectionSize = 0.1, splits = 5, splitSetSize = 500, cutoffPermutations = 20, threadsNumber = 8)
+rank_feats <- mcfs(class ~ ., data_train, projections = 1250, projectionSize = 0.2, cutoffPermutations = 40, threadsNumber = 8, cutoffMethod = "mean")
 
 # Fetch results
 train_feats <- rank_feats$RI[1:rank_feats$cutoff_value,]
@@ -66,7 +66,7 @@ dim(sel_data_test)
 ```{r}
 ros <- rosetta(sel_data_train,
               reducer = "Johnson",
-              JohnsonParam = list(Modulo = TRUE, BRT = TRUE, BRTprec = 0.7, Precompute = FALSE, Approximate = TRUE, Fraction = 1),
+              JohnsonParam = list(Modulo = TRUE, BRT = TRUE, BRTprec = 0.6, Precompute = FALSE, Approximate = TRUE, Fraction = 1),
               reducerDiscernibility = "Object",
               classifier = "StandardVoter",
               underSample = FALSE,
