@@ -119,26 +119,13 @@ print(rlsHuman_gen[1:3,])
 plotMeanROC(ros_gen)
 ```
 
-# Rosetta Test Run
-```{r}
-truth <- sel_data_test[, "class"]
-test_features <- subset(sel_data_test, select = -class)
-
-# use rec from train to infer on test
-pred <- predictClass(test_features, rec, discrete = TRUE, validate = TRUE, defClass = truth)
-
-library(caret)
-RBM_pred <- factor(pred$out$predictedClass, levels = levels(truth))
-cm <- confusionMatrix(RBM_pred, truth)
-print(cm)
-```
-
 # Seeds Test
 ```{r}
-n_seeds <- 1000
+n_seeds <- 5000
 seed_accs <- numeric(n_seeds)
 
 for (i in seq_len(n_seeds)) {
+  if (i %% 50 == 0) cat("Seed", i, "of", n_seeds, "\n")
   set.seed(i)
   ros_seed <- rosetta(sel_data_train,
                       reducer = "Johnson",
@@ -158,47 +145,18 @@ cat("  Max accuracy :", round(max(seed_accs), 4), "\n")
 cat("  Mean accuracy:", round(mean(seed_accs), 4), "\n")
 ```
 
-# Permutation Test
+# Rosetta Test Run
 ```{r}
-n_perms <- 1000
-obs_acc <- ros$quality$accuracyMean
+truth <- sel_data_test[, "class"]
+test_features <- subset(sel_data_test, select = -class)
 
-perm_accs <- numeric(n_perms)
+# use rec from train to infer on test
+pred <- predictClass(test_features, rec, discrete = TRUE, validate = TRUE, defClass = truth)
 
-for (i in seq_len(n_perms)) {
-  perm_train <- sel_data_train
-  perm_train$class <- sample(perm_train$class)
-
-  ros_perm <- rosetta(perm_train,
-                      reducer = "Johnson",
-                      JohnsonParam = list(Modulo = TRUE, BRT = TRUE, BRTprec = 0.6,
-                                          Precompute = FALSE, Approximate = TRUE, Fraction = 1),
-                      reducerDiscernibility = "Object",
-                      classifier = "StandardVoter",
-                      underSample = FALSE,
-                      roc = FALSE, discrete = TRUE)
-
-  perm_accs[i] <- ros_perm$quality$accuracyMean
-}
-
-p_val <- mean(perm_accs >= obs_acc)
-cat("Observed accuracy:", round(obs_acc, 4), "\n")
-cat("Permutation p-value:", p_val, "\n")
-
-hist(perm_accs,
-     breaks = 30,
-     main = sprintf("Permutation Test (n = %d)", n_perms),
-     xlab = "Accuracy (shuffled labels)",
-     col = "lightsteelblue",
-     border = "white")
-abline(v = obs_acc, col = "red", lwd = 2, lty = 2)
-legend("topright",
-       legend = c(paste0("Observed: ", round(obs_acc, 3)),
-                  paste0("p-value: ", round(p_val, 4))),
-       col = c("red", NA),
-       lty = c(2, NA),
-       lwd = c(2, NA),
-       bty = "n")
+library(caret)
+RBM_pred <- factor(pred$out$predictedClass, levels = levels(truth))
+cm <- confusionMatrix(RBM_pred, truth)
+print(cm)
 ```
 
 # Important Features
