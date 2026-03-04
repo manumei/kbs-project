@@ -57,7 +57,7 @@ sel_data_train[] <- lapply(sel_data_train, as.factor)
 dim(sel_data_train)
 ```
 
-# Cell 3: Implement Here
+# Cell 3: Run
 ```{r}
 results <- data.frame(
   seed        = integer(),
@@ -96,7 +96,7 @@ for (seed in 1:2500) {
 }
 ```
 
-# Cell 4: Implement Rank
+# Cell 4: Rank
 ```{r}
 combo_rank <- do.call(rbind, lapply(
   split(results, results$ros_config),
@@ -114,7 +114,7 @@ rownames(combo_rank) <- NULL
 print(combo_rank)
 ```
 
-# Cell 5: Implement top 5 runs
+# Cell 5: Top 4
 ```{r}
 top4 <- results[order(-results$accuracy), ][1:4, ]
 rownames(top4) <- NULL
